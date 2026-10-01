@@ -1,0 +1,225 @@
+<UserControl x:Class="DiagnosticStudio.App.Views.TimelineView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:DiagnosticStudio.App.Views"
+             xmlns:tl="clr-namespace:DiagnosticStudio.App.ViewModels.Timeline"
+             DataContextChanged="OnDataContextChanged">
+
+    <UserControl.Resources>
+        <Style x:Key="TimelineRowStyle" TargetType="ListViewItem" BasedOn="{StaticResource GridRowStyle}">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <EventSetter Event="MouseDoubleClick" Handler="OnRowDoubleClick" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Severity}" Value="Error">
+                    <Setter Property="Foreground" Value="{DynamicResource ErrorTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                    <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="BannerStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource BannerBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BannerBorderBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="Padding" Value="8,4" />
+        </Style>
+
+        <Style x:Key="CompactBox" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Padding" Value="4,0" />
+        </Style>
+        <Style x:Key="CompactCombo" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Padding" Value="6,0" />
+        </Style>
+        <Style x:Key="CompactButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Padding" Value="8,0" />
+        </Style>
+        <Style x:Key="SourceItemStyle" TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="6,2" />
+        </Style>
+
+        <Style x:Key="BusyBar" TargetType="ProgressBar" BasedOn="{StaticResource {x:Type ProgressBar}}">
+            <Setter Property="Height" Value="2" />
+            <Setter Property="IsIndeterminate" Value="True" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Visibility" Value="Hidden" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsBuilding}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsFiltering}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Style="{StaticResource BannerStyle}">
+            <Border.Visibility>
+                <Binding Path="HasNotices">
+                    <Binding.Converter>
+                        <BooleanToVisibilityConverter />
+                    </Binding.Converter>
+                </Binding>
+            </Border.Visibility>
+            <TextBlock Text="{Binding Notices}" TextWrapping="Wrap" />
+        </Border>
+
+        <!-- Filters -->
+        <Border DockPanel.Dock="Top" Background="{DynamicResource PanelBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="6,4,6,0">
+            <WrapPanel>
+                <ComboBox Width="150" Margin="0,0,10,4" Style="{StaticResource CompactCombo}" ItemsSource="{Binding SeverityOptions}"
+                          DisplayMemberPath="Label" SelectedItem="{Binding SelectedSeverity}" ToolTip="Level" />
+
+                <TextBlock Text="From" VerticalAlignment="Center" Margin="0,0,4,4" />
+                <TextBox x:Name="FromBox" Width="140" Margin="0,0,6,4" Style="{StaticResource CompactBox}" VerticalContentAlignment="Center"
+                         Text="{Binding FromText, UpdateSourceTrigger=LostFocus}" KeyDown="OnTimeBoxKeyDown"
+                         ToolTip="Start of the range, UTC, e.g. 2026-07-23 14:12:00. Enter to apply." />
+                <TextBlock Text="to" VerticalAlignment="Center" Margin="0,0,4,4" />
+                <TextBox x:Name="ToBox" Width="140" Margin="0,0,12,4" Style="{StaticResource CompactBox}" VerticalContentAlignment="Center"
+                         Text="{Binding ToText, UpdateSourceTrigger=LostFocus}" KeyDown="OnTimeBoxKeyDown"
+                         ToolTip="End of the range, UTC. Enter to apply." />
+
+                <Button Content="Around selection" Margin="0,0,4,4" Style="{StaticResource CompactButton}" Command="{Binding ShowAroundCommand}"
+                        ToolTip="Show only what happened close to the selected entry, in every log" />
+                <ComboBox Width="105" Margin="0,0,12,4" Style="{StaticResource CompactCombo}" ItemsSource="{Binding AroundOptions}"
+                          DisplayMemberPath="Label" SelectedItem="{Binding SelectedAround}" />
+
+                <Button Content="Clear filters" Margin="0,0,12,4" Style="{StaticResource CompactButton}" Command="{Binding ClearFiltersCommand}" />
+                <TextBlock Text="{Binding RangeError}" Foreground="{DynamicResource ErrorTextBrush}"
+                           VerticalAlignment="Center" Margin="0,0,0,4" />
+            </WrapPanel>
+        </Border>
+
+        <!-- Count and range -->
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource PanelBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="8,3">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="12,0,0,0">
+                    <TextBlock Text="Go to" VerticalAlignment="Center" Margin="0,0,4,0" />
+                    <TextBox Width="150" Style="{StaticResource CompactBox}" VerticalContentAlignment="Center"
+                             Text="{Binding JumpText, UpdateSourceTrigger=PropertyChanged}"
+                             ToolTip="Jump to the first entry at or after this time (UTC), e.g. 2026-07-23 14:12:00. Enter to go.">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Return" Command="{Binding JumpToTimeCommand}" />
+                        </TextBox.InputBindings>
+                    </TextBox>
+                </StackPanel>
+                <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource MutedTextBrush}"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </Border>
+
+        <ProgressBar DockPanel.Dock="Top" Style="{StaticResource BusyBar}" />
+
+        <TextBlock DockPanel.Dock="Top" Text="{Binding ProgressText}" Margin="8,4" Foreground="{DynamicResource MutedTextBrush}">
+            <TextBlock.Visibility>
+                <Binding Path="IsBuilding">
+                    <Binding.Converter>
+                        <BooleanToVisibilityConverter />
+                    </Binding.Converter>
+                </Binding>
+            </TextBlock.Visibility>
+        </TextBlock>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="270" MinWidth="120" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" MinWidth="200" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Sources -->
+            <DockPanel Grid.Column="0" Background="{DynamicResource PanelBrush}">
+                <Border DockPanel.Dock="Top" Background="{DynamicResource PanelHeaderBrush}" Padding="8,4">
+                    <TextBlock Text="LOGS" Style="{StaticResource PanelTitle}" />
+                </Border>
+                <ListBox ItemsSource="{Binding Sources}" BorderThickness="0" Background="Transparent"
+                         ItemContainerStyle="{StaticResource SourceItemStyle}"
+                         SelectionMode="Single" HorizontalContentAlignment="Stretch"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="{x:Type tl:TimelineSourceViewModel}">
+                            <StackPanel ToolTip="{Binding ToolTip}" Margin="0,1">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding CountText}" Margin="8,0,0,0"
+                                               Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                                    <CheckBox IsChecked="{Binding IsIncluded}" VerticalAlignment="Center" MinHeight="0" Padding="6,0,0,0">
+                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                    </CheckBox>
+                                </DockPanel>
+                                <StackPanel Orientation="Horizontal" Margin="24,2,0,0">
+                                    <StackPanel.Visibility>
+                                        <Binding Path="HasUnzonedTimes">
+                                            <Binding.Converter>
+                                                <BooleanToVisibilityConverter />
+                                            </Binding.Converter>
+                                        </Binding>
+                                    </StackPanel.Visibility>
+                                    <TextBlock Text="Written in" VerticalAlignment="Center" Margin="0,0,6,0"
+                                               Foreground="{DynamicResource MutedTextBrush}" />
+                                    <ComboBox Width="110" Style="{StaticResource CompactCombo}" ItemsSource="{Binding OffsetOptions}" DisplayMemberPath="Label"
+                                              SelectedItem="{Binding Offset}"
+                                              ToolTip="The time zone this log's times were written in. The log does not say; set it if you know." />
+                                </StackPanel>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="{DynamicResource BorderBrush}" />
+
+            <!-- Entries -->
+            <ListView x:Name="EntryList" Grid.Column="2" ItemsSource="{Binding Rows}"
+                      SelectedItem="{Binding SelectedRow, Mode=TwoWay}" SelectionMode="Single"
+                      ItemContainerStyle="{StaticResource TimelineRowStyle}" BorderThickness="0"
+                      VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                      VirtualizingPanel.ScrollUnit="Item" ScrollViewer.CanContentScroll="True"
+                      KeyDown="OnListKeyDown">
+                <ListView.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Open source"
+                                  Command="{Binding PlacementTarget.DataContext.OpenSelectedCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                        <MenuItem Header="Clear time range"
+                                  Command="{Binding PlacementTarget.DataContext.ClearRangeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                        <MenuItem Header="Show only around this"
+                                  Command="{Binding PlacementTarget.DataContext.ShowAroundCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                    </ContextMenu>
+                </ListView.ContextMenu>
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="Time (UTC)" Width="180" DisplayMemberBinding="{Binding TimeText}" />
+                        <GridViewColumn Header="Level" Width="90" DisplayMemberBinding="{Binding LevelName}" />
+                        <GridViewColumn Header="Log" Width="190">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate DataType="{x:Type tl:TimelineRowViewModel}">
+                                    <TextBlock Text="{Binding SourceName}" ToolTip="{Binding SourceToolTip}" TextTrimming="CharacterEllipsis" />
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        <GridViewColumn Header="Where" Width="95" DisplayMemberBinding="{Binding PositionText}" />
+                        <GridViewColumn Header="Text" Width="1200">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate DataType="{x:Type tl:TimelineRowViewModel}">
+                                    <TextBlock Text="{Binding Text}" FontFamily="{StaticResource MonoFont}" FontSize="11.5"
+                                               TextTrimming="CharacterEllipsis" />
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+        </Grid>
+    </DockPanel>
+</UserControl>

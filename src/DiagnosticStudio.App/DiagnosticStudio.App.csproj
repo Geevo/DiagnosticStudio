@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\DiagnosticStudio.Core\DiagnosticStudio.Core.csproj" />
+    <ProjectReference Include="..\DiagnosticStudio.Ingestion\DiagnosticStudio.Ingestion.csproj" />
+    <ProjectReference Include="..\DiagnosticStudio.Parsers\DiagnosticStudio.Parsers.csproj" />
+    <ProjectReference Include="..\DiagnosticStudio.Search\DiagnosticStudio.Search.csproj" />
+    <ProjectReference Include="..\DiagnosticStudio.Rules\DiagnosticStudio.Rules.csproj" />
+    <ProjectReference Include="..\DiagnosticStudio.Timeline\DiagnosticStudio.Timeline.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <!-- ThemeMode (Fluent light/dark following Windows) is still flagged experimental by WPF. -->
+    <NoWarn>$(NoWarn);WPF0001</NoWarn>
+
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    
+  </PropertyGroup>
+
+</Project>

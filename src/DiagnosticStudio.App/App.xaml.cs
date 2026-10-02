@@ -32,6 +32,7 @@ public partial class App : Application
         base.OnStartup(e);
 
         MenuDropAlignment.KeepRight();
+        ScrollBarThumbMinimum.Register();
 
         // Before any window exists, so the first frame is already in the user's light/dark mode.
         _services = ConfigureServices();

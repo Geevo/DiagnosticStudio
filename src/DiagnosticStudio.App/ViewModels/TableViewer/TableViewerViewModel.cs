@@ -49,9 +49,9 @@ public sealed partial class TableViewerViewModel : ObservableObject, ILocationNa
         }
 
         UnreadText = document.UnreadLines > 0
-            ? string.Create(
-                CultureInfo.CurrentCulture,
-                $"{document.UnreadLines:N0} lines are not part of any record, first at line {document.FirstUnreadLine:N0}. They are in the raw source.")
+            ? document.UnreadLines == 1
+                ? string.Create(CultureInfo.CurrentCulture, $"1 line is not part of any record, at line {document.FirstUnreadLine:N0}. It is in the raw source.")
+                : string.Create(CultureInfo.CurrentCulture, $"{document.UnreadLines:N0} lines are not part of any record, first at line {document.FirstUnreadLine:N0}. They are in the raw source.")
             : null;
 
         UpdateStatus();

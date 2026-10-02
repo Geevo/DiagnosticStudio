@@ -141,9 +141,9 @@ public sealed class FileHealthService : IFileHealthService
                 found.Add(new FileProblem(
                     artifact,
                     FileProblemKind.Caution,
-                    string.Create(
-                        CultureInfo.CurrentCulture,
-                        $"{table.UnreadLines:N0} lines are not part of any record. First at line {table.FirstUnreadLine:N0}. They are visible in the raw source."),
+                    table.UnreadLines == 1
+                        ? string.Create(CultureInfo.CurrentCulture, $"1 line is not part of any record, at line {table.FirstUnreadLine:N0}. It is visible in the raw source.")
+                        : string.Create(CultureInfo.CurrentCulture, $"{table.UnreadLines:N0} lines are not part of any record. First at line {table.FirstUnreadLine:N0}. They are visible in the raw source."),
                     "The records were read; open the raw source at the first such line to see what is there.",
                     DiagnosticLocation.ForLine(artifact.Id, table.FirstUnreadLine)));
                 break;
@@ -173,7 +173,9 @@ public sealed class FileHealthService : IFileHealthService
             found.Add(new FileProblem(
                 artifact,
                 FileProblemKind.Partial,
-                string.Create(culture, $"{registry.TotalIssueCount:N0} lines could not be parsed. First at line {first:N0}. They are visible in the raw source."),
+                registry.TotalIssueCount == 1
+                    ? string.Create(culture, $"1 line could not be parsed, at line {first:N0}. It is visible in the raw source.")
+                    : string.Create(culture, $"{registry.TotalIssueCount:N0} lines could not be parsed. First at line {first:N0}. They are visible in the raw source."),
                 "The rest of the file was read. Open the raw source at the first unparsed line to see what the exporting tool wrote there.",
                 first > 0 ? DiagnosticLocation.ForLine(artifact.Id, first) : DiagnosticLocation.ForArtifact(artifact.Id)));
         }

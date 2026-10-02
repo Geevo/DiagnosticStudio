@@ -386,8 +386,10 @@ public sealed partial class RegistryViewerViewModel : ObservableObject, ILocatio
         var parts = new List<string>();
         if (doc.TotalIssueCount > 0)
         {
-            var first = doc.Issues.Count > 0 ? $" First at line {doc.Issues[0].Line:N0}." : string.Empty;
-            parts.Add($"{doc.TotalIssueCount:N0} lines could not be parsed.{first} They are visible in the raw source.");
+            var line = doc.Issues.Count > 0 ? doc.Issues[0].Line : 0;
+            parts.Add(doc.TotalIssueCount == 1
+                ? $"1 line could not be parsed{(line > 0 ? $", at line {line:N0}" : string.Empty)}. It is visible in the raw source."
+                : $"{doc.TotalIssueCount:N0} lines could not be parsed.{(line > 0 ? $" First at line {line:N0}." : string.Empty)} They are visible in the raw source.");
         }
 
         if (doc.IsTruncated)

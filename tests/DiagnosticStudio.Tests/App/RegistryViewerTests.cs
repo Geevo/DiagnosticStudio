@@ -326,8 +326,7 @@ public sealed class RegistryViewerTests : IDisposable
     {
         var (vm, _) = Open("Windows Registry Editor Version 5.00\n\n[HKEY_CURRENT_USER\\K]\nnonsense\n\"A\"=\"1\"\n");
 
-        Assert.Contains("1 lines could not be parsed", vm.WarningText);
-        Assert.Contains("line 4", vm.WarningText);
+        Assert.Contains("1 line could not be parsed, at line 4. It is visible", vm.WarningText);
         Assert.Contains("raw source", vm.WarningText);
     }
 

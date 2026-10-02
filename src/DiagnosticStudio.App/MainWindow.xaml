@@ -408,13 +408,13 @@
             <StatusBarItem HorizontalAlignment="Right">
                 <StackPanel Orientation="Horizontal">
                     <Button Margin="0,0,14,0" Padding="4,0" MinHeight="0" BorderThickness="0" Background="Transparent" Foreground="White"
-                            Content="{Binding Zoom.Text, StringFormat='Zoom {0}'}" Command="{Binding Zoom.ResetCommand}"
+                            Content="{Binding Zoom.Label}" Command="{Binding Zoom.ResetCommand}"
                             ToolTip="Interface zoom. Click to reset to 100%. Ctrl+mouse wheel, Ctrl++ and Ctrl+- change it.">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                                 <Setter Property="Visibility" Value="Collapsed" />
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Zoom.IsScaled}" Value="True">
+                                    <DataTrigger Binding="{Binding Zoom.IsIndicatorVisible}" Value="True">
                                         <Setter Property="Visibility" Value="Visible" />
                                     </DataTrigger>
                                 </Style.Triggers>

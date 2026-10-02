@@ -136,6 +136,67 @@ public sealed class ZoomViewModelTests : IDisposable
         Assert.Equal(110, settings.ZoomPercent);
     }
 
+    // ---- the status bar indicator ----
+
+    private static async Task<bool> BecomesAsync(Func<bool> condition, bool expected)
+    {
+        for (var i = 0; i < 100; i++)
+        {
+            if (condition() == expected)
+            {
+                return true;
+            }
+
+            await Task.Delay(20);
+        }
+
+        return condition() == expected;
+    }
+
+    [Fact]
+    public void The_indicator_is_hidden_at_100_percent_until_something_changes()
+    {
+        Assert.False(new ZoomViewModel(new MemorySettings()).IsIndicatorVisible);
+    }
+
+    [Fact]
+    public void The_indicator_stays_while_scaled()
+    {
+        var zoom = new ZoomViewModel(new MemorySettings { ZoomPercent = 130 }) { Linger = TimeSpan.FromMilliseconds(30) };
+
+        zoom.ZoomInCommand.Execute(null);
+
+        Assert.True(zoom.IsIndicatorVisible);
+    }
+
+    [Fact]
+    public async Task Returning_to_100_percent_shows_the_indicator_for_a_moment_and_then_hides_it()
+    {
+        var zoom = new ZoomViewModel(new MemorySettings { ZoomPercent = 120 }) { Linger = TimeSpan.FromMilliseconds(150) };
+
+        zoom.ResetCommand.Execute(null);
+
+        Assert.Equal("100%", zoom.Text);
+        Assert.Equal("Zoom 100%", zoom.Label);
+        Assert.True(zoom.IsIndicatorVisible);
+        Assert.True(await BecomesAsync(() => zoom.IsIndicatorVisible, expected: false));
+    }
+
+    [Fact]
+    public async Task Each_change_restarts_the_wait()
+    {
+        var zoom = new ZoomViewModel(new MemorySettings { ZoomPercent = 110 }) { Linger = TimeSpan.FromMilliseconds(400) };
+
+        zoom.ZoomOutCommand.Execute(null);
+        await Task.Delay(250);
+        zoom.ZoomInCommand.Execute(null);
+        zoom.ZoomOutCommand.Execute(null);
+        await Task.Delay(250);
+
+        Assert.True(zoom.IsIndicatorVisible);   // 500 ms after the first change, but only 250 after the last
+        Assert.True(await BecomesAsync(() => zoom.IsIndicatorVisible, expected: false));
+    }
+
     // ---- the file the setting lives in ----
 
     [Fact]

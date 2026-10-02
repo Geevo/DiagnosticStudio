@@ -14,6 +14,8 @@ public sealed partial class ZoomViewModel : ObservableObject
     public const int Normal = 100;
 
     private readonly ISettingsStore _settings;
+    private CancellationTokenSource? _lingering;
+    private bool _recentlyChanged;
 
     public ZoomViewModel(ISettingsStore settings)
     {
@@ -22,7 +24,7 @@ public sealed partial class ZoomViewModel : ObservableObject
     }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Scale), nameof(Text), nameof(IsScaled))]
+    [NotifyPropertyChangedFor(nameof(Scale), nameof(Text), nameof(Label), nameof(IsScaled), nameof(IsIndicatorVisible))]
     [NotifyCanExecuteChangedFor(nameof(ZoomInCommand), nameof(ZoomOutCommand), nameof(ResetCommand))]
     private int _percent;
 
@@ -31,10 +33,56 @@ public sealed partial class ZoomViewModel : ObservableObject
 
     public string Text => string.Create(CultureInfo.CurrentCulture, $"{Percent}%");
 
-    /// <summary>Not at 100%, so the status bar shows it.</summary>
+    /// <summary>The status bar text.</summary>
+    public string Label => "Zoom " + Text;
+
+    /// <summary>Not at 100%.</summary>
     public bool IsScaled => Percent != Normal;
 
-    partial void OnPercentChanged(int value) => _settings.ZoomPercent = value;
+    /// <summary>
+    /// Whether the status bar shows the level: always while scaled, and for a moment after any change, so that
+    /// returning to 100% is confirmed on screen before the indicator goes away again.
+    /// </summary>
+    public bool IsIndicatorVisible => IsScaled || _recentlyChanged;
+
+    /// <summary>How long the indicator stays after the last change when the level is 100%.</summary>
+    internal TimeSpan Linger { get; set; } = TimeSpan.FromSeconds(2);
+
+    partial void OnPercentChanged(int value)
+    {
+        _settings.ZoomPercent = value;
+        ShowBriefly();
+    }
+
+    // Each change restarts the wait, so a run of wheel notches keeps the indicator up until the last one.
+    private void ShowBriefly()
+    {
+        _lingering?.Cancel();
+        var source = new CancellationTokenSource();
+        _lingering = source;
+        SetRecentlyChanged(true);
+        _ = HideAfterLingerAsync(source.Token);
+    }
+
+    private async Task HideAfterLingerAsync(CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(Linger, token).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        SetRecentlyChanged(false);
+    }
+
+    private void SetRecentlyChanged(bool value)
+    {
+        _recentlyChanged = value;
+        OnPropertyChanged(nameof(IsIndicatorVisible));
+    }
 
     [RelayCommand(CanExecute = nameof(CanZoomIn))]
     private void ZoomIn() => Percent = Clamp(Percent + Step);

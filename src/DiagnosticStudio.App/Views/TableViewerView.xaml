@@ -95,57 +95,59 @@
 
                     <ProgressBar DockPanel.Dock="Top" Style="{StaticResource BusyBar}" />
 
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="*" MinHeight="120" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="110" MinHeight="50" />
-                        </Grid.RowDefinitions>
+                    <local:ScaledContent>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" MinHeight="120" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="110" MinHeight="50" />
+                            </Grid.RowDefinitions>
 
-                        <ListView x:Name="RowList" Grid.Row="0" ItemsSource="{Binding Rows}"
-                                  SelectedItem="{Binding SelectedRow, Mode=TwoWay}" SelectionMode="Extended"
-                                  ItemContainerStyle="{StaticResource RecordRowStyle}" BorderThickness="0"
-                                  VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
-                                  VirtualizingPanel.ScrollUnit="Item" ScrollViewer.CanContentScroll="True">
-                            <ListView.Style>
-                                <Style TargetType="ListView" BasedOn="{StaticResource {x:Type ListView}}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsLog}" Value="True">
-                                            <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
-                                            <Setter Property="FontSize" Value="11.5" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </ListView.Style>
-                            <ListView.ContextMenu>
-                                <ContextMenu>
-                                    <MenuItem Header="Copy rows" Command="ApplicationCommands.Copy" InputGestureText="Ctrl+C"
-                                              CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
-                                    <MenuItem Header="Show in raw source"
-                                              Command="{Binding PlacementTarget.DataContext.ShowInRawSourceCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
-                                </ContextMenu>
-                            </ListView.ContextMenu>
-                        </ListView>
+                            <ListView x:Name="RowList" Grid.Row="0" ItemsSource="{Binding Rows}"
+                                      SelectedItem="{Binding SelectedRow, Mode=TwoWay}" SelectionMode="Extended"
+                                      ItemContainerStyle="{StaticResource RecordRowStyle}" BorderThickness="0"
+                                      VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                                      VirtualizingPanel.ScrollUnit="Item" ScrollViewer.CanContentScroll="True">
+                                <ListView.Style>
+                                    <Style TargetType="ListView" BasedOn="{StaticResource {x:Type ListView}}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsLog}" Value="True">
+                                                <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+                                                <Setter Property="FontSize" Value="11.5" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ListView.Style>
+                                <ListView.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Copy rows" Command="ApplicationCommands.Copy" InputGestureText="Ctrl+C"
+                                                  CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                        <MenuItem Header="Show in raw source"
+                                                  Command="{Binding PlacementTarget.DataContext.ShowInRawSourceCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                    </ContextMenu>
+                                </ListView.ContextMenu>
+                            </ListView>
 
-                        <GridSplitter Grid.Row="1" Height="4" HorizontalAlignment="Stretch" Background="{DynamicResource BorderBrush}" />
+                            <GridSplitter Grid.Row="1" Height="4" HorizontalAlignment="Stretch" Background="{DynamicResource BorderBrush}" />
 
-                        <!-- Detail -->
-                        <DockPanel Grid.Row="2">
-                            <Border DockPanel.Dock="Top" Background="{DynamicResource PanelHeaderBrush}" Padding="6,4">
-                                <DockPanel>
-                                    <Button DockPanel.Dock="Right" Content="Raw" Margin="6,0,0,0" Padding="8,2" MinHeight="0"
-                                            Command="{Binding ShowInRawSourceCommand}" ToolTip="Show this record in the raw source" />
-                                    <Button DockPanel.Dock="Right" Content="Copy" Margin="6,0,0,0" Padding="8,2" MinHeight="0"
-                                            Click="OnCopyDetail" ToolTip="Copy this record's text" />
-                                    <TextBlock Text="{Binding DetailInfo}" VerticalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" />
-                                </DockPanel>
-                            </Border>
-                            <TextBox Text="{Binding DetailText, Mode=OneWay}" IsReadOnly="True"
-                                     FontFamily="{StaticResource MonoFont}" FontSize="12" BorderThickness="0"
-                                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                                     TextWrapping="NoWrap" Padding="6,4" />
-                        </DockPanel>
-                    </Grid>
+                            <!-- Detail -->
+                            <DockPanel Grid.Row="2">
+                                <Border DockPanel.Dock="Top" Background="{DynamicResource PanelHeaderBrush}" Padding="6,4">
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right" Content="Raw" Margin="6,0,0,0" Padding="8,2" MinHeight="0"
+                                                Command="{Binding ShowInRawSourceCommand}" ToolTip="Show this record in the raw source" />
+                                        <Button DockPanel.Dock="Right" Content="Copy" Margin="6,0,0,0" Padding="8,2" MinHeight="0"
+                                                Click="OnCopyDetail" ToolTip="Copy this record's text" />
+                                        <TextBlock Text="{Binding DetailInfo}" VerticalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" />
+                                    </DockPanel>
+                                </Border>
+                                <TextBox Text="{Binding DetailText, Mode=OneWay}" IsReadOnly="True"
+                                         FontFamily="{StaticResource MonoFont}" FontSize="12" BorderThickness="0"
+                                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                                         TextWrapping="NoWrap" Padding="6,4" />
+                            </DockPanel>
+                        </Grid>
+                    </local:ScaledContent>
                 </DockPanel>
             </TabItem>
 

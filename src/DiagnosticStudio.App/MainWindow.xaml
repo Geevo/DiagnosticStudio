@@ -27,6 +27,12 @@
         <KeyBinding Key="Subtract" Modifiers="Ctrl" Command="{Binding Zoom.ZoomOutCommand}" />
         <KeyBinding Key="D0" Modifiers="Ctrl" Command="{Binding Zoom.ResetCommand}" />
         <KeyBinding Key="NumPad0" Modifiers="Ctrl" Command="{Binding Zoom.ResetCommand}" />
+        <KeyBinding Key="OemPlus" Modifiers="Ctrl+Shift" Command="{Binding ContentZoom.ZoomInCommand}" />
+        <KeyBinding Key="Add" Modifiers="Ctrl+Shift" Command="{Binding ContentZoom.ZoomInCommand}" />
+        <KeyBinding Key="OemMinus" Modifiers="Ctrl+Shift" Command="{Binding ContentZoom.ZoomOutCommand}" />
+        <KeyBinding Key="Subtract" Modifiers="Ctrl+Shift" Command="{Binding ContentZoom.ZoomOutCommand}" />
+        <KeyBinding Key="D0" Modifiers="Ctrl+Shift" Command="{Binding ContentZoom.ResetCommand}" />
+        <KeyBinding Key="NumPad0" Modifiers="Ctrl+Shift" Command="{Binding ContentZoom.ResetCommand}" />
     </Window.InputBindings>
 
     <Window.Resources>
@@ -110,9 +116,13 @@
                 <MenuItem Header="E_xit" Command="ApplicationCommands.Close" InputGestureText="Alt+F4" />
             </MenuItem>
             <MenuItem Header="_View">
-                <MenuItem Header="Zoom _In" Command="{Binding Zoom.ZoomInCommand}" InputGestureText="Ctrl++" />
-                <MenuItem Header="Zoom _Out" Command="{Binding Zoom.ZoomOutCommand}" InputGestureText="Ctrl+-" />
-                <MenuItem Header="_Reset Zoom" Command="{Binding Zoom.ResetCommand}" InputGestureText="Ctrl+0" />
+                <MenuItem Header="Interface Zoom _In" Command="{Binding Zoom.ZoomInCommand}" InputGestureText="Ctrl++" />
+                <MenuItem Header="Interface Zoom _Out" Command="{Binding Zoom.ZoomOutCommand}" InputGestureText="Ctrl+-" />
+                <MenuItem Header="_Reset Interface Zoom" Command="{Binding Zoom.ResetCommand}" InputGestureText="Ctrl+0" />
+                <Separator />
+                <MenuItem Header="Document Zoom I_n" Command="{Binding ContentZoom.ZoomInCommand}" InputGestureText="Ctrl+Shift++" />
+                <MenuItem Header="Document Zoom O_ut" Command="{Binding ContentZoom.ZoomOutCommand}" InputGestureText="Ctrl+Shift+-" />
+                <MenuItem Header="Reset Document _Zoom" Command="{Binding ContentZoom.ResetCommand}" InputGestureText="Ctrl+Shift+0" />
                 <Separator />
                 <MenuItem Header="_Overview" Command="{Binding Explorer.OpenOverviewCommand}" />
                 <MenuItem Header="_Timeline" Command="{Binding Explorer.OpenTimelineCommand}" />
@@ -253,6 +263,10 @@
 
             <!-- Document tabs -->
             <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
                 <TabControl ItemsSource="{Binding Documents.Documents}"
                             SelectedItem="{Binding Documents.ActiveDocument, Mode=TwoWay}"
                             BorderThickness="0,1,0,0">
@@ -330,8 +344,14 @@
                     </TabControl.ItemTemplate>
                 </TabControl>
 
+                <Border Grid.Row="1" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="0,1,0,0" Padding="6,2"
+                        Visibility="{Binding Documents.ActiveDocument.SupportsContentZoom, Converter={StaticResource BoolToVisibility}}">
+                    <views:ZoomBox DataContext="{Binding ContentZoom}" HorizontalAlignment="Left" />
+                </Border>
+
                 <!-- Staged ingestion progress -->
-                <Border Style="{StaticResource LoadingOverlay}" Background="{DynamicResource OverlayBrush}">
+                <Border Grid.RowSpan="2" Style="{StaticResource LoadingOverlay}" Background="{DynamicResource OverlayBrush}">
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="420">
                         <TextBlock Text="Preparing diagnostics..." FontSize="16" FontWeight="SemiBold" />
                         <ProgressBar IsIndeterminate="True" Height="4" Margin="0,12" />

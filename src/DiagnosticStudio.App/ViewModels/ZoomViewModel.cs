@@ -6,25 +6,34 @@ using DiagnosticStudio.App.Services;
 namespace DiagnosticStudio.App.ViewModels;
 
 /// <summary>Scales the whole interface, for small text on high-resolution screens and for projecting.</summary>
-public sealed partial class ZoomViewModel : ObservableObject
+public partial class ZoomViewModel : ObservableObject
 {
     public const int Minimum = 50;
     public const int Maximum = 300;
     public const int Step = 10;
     public const int Normal = 100;
 
-    private readonly ISettingsStore _settings;
+    private readonly Action<int> _save;
     private CancellationTokenSource? _lingering;
     private bool _recentlyChanged;
 
     public ZoomViewModel(ISettingsStore settings)
+        : this(settings.ZoomPercent, percent => settings.ZoomPercent = percent)
     {
-        _settings = settings;
-        _percent = Clamp(settings.ZoomPercent);
     }
 
+    protected ZoomViewModel(int saved, Action<int> save)
+    {
+        _save = save;
+        _percent = Clamp(saved);
+    }
+
+    /// <summary>The levels offered in a list; any level from <see cref="Minimum"/> to <see cref="Maximum"/> can be typed.</summary>
+    public static IReadOnlyList<string> Presets { get; } =
+        new[] { 50, 75, 100, 125, 150, 200, 300 }.Select(Format).ToArray();
+
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Scale), nameof(Text), nameof(Label), nameof(IsScaled), nameof(IsIndicatorVisible))]
+    [NotifyPropertyChangedFor(nameof(Scale), nameof(Text), nameof(Label), nameof(Entry), nameof(IsScaled), nameof(IsIndicatorVisible))]
     [NotifyCanExecuteChangedFor(nameof(ZoomInCommand), nameof(ZoomOutCommand), nameof(ResetCommand))]
     private int _percent;
 
@@ -35,6 +44,26 @@ public sealed partial class ZoomViewModel : ObservableObject
 
     /// <summary>The status bar text.</summary>
     public string Label => "Zoom " + Text;
+
+    /// <summary>
+    /// The level as shown in an editable list ("125 %"). Setting it accepts what a person types: "125", "125%" or
+    /// "125 %"; text that holds no number is dropped and the box shows the current level again.
+    /// </summary>
+    public string Entry
+    {
+        get => Format(Percent);
+        set
+        {
+            var digits = new string((value ?? string.Empty).Where(char.IsAsciiDigit).Take(4).ToArray());
+            if (int.TryParse(digits, NumberStyles.None, CultureInfo.InvariantCulture, out var typed))
+            {
+                Percent = Clamp(typed);
+            }
+
+            // Also when nothing changed: "9999" is shown as the 300 % it became, and "abc" as the level it was.
+            OnPropertyChanged(nameof(Entry));
+        }
+    }
 
     /// <summary>Not at 100%.</summary>
     public bool IsScaled => Percent != Normal;
@@ -50,7 +79,7 @@ public sealed partial class ZoomViewModel : ObservableObject
 
     partial void OnPercentChanged(int value)
     {
-        _settings.ZoomPercent = value;
+        _save(value);
         ShowBriefly();
     }
 
@@ -111,4 +140,18 @@ public sealed partial class ZoomViewModel : ObservableObject
     }
 
     private static int Clamp(int percent) => Math.Clamp(percent, Minimum, Maximum);
+
+    private static string Format(int percent) => string.Create(CultureInfo.InvariantCulture, $"{percent} %");
+}
+
+/// <summary>
+/// Scales what is shown in the document pane (log text, tables, trees, detail), apart from the interface zoom, for
+/// people who want large log text but normal-sized menus. The two multiply.
+/// </summary>
+public sealed class ContentZoomViewModel : ZoomViewModel
+{
+    public ContentZoomViewModel(ISettingsStore settings)
+        : base(settings.ContentZoomPercent, percent => settings.ContentZoomPercent = percent)
+    {
+    }
 }

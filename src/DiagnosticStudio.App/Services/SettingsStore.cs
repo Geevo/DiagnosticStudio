@@ -8,6 +8,9 @@ public interface ISettingsStore
 {
     /// <summary>Interface scale in percent; 100 is normal.</summary>
     int ZoomPercent { get; set; }
+
+    /// <summary>Scale of the document pane alone, in percent; 100 is normal.</summary>
+    int ContentZoomPercent { get; set; }
 }
 
 /// <summary>
@@ -19,6 +22,8 @@ public sealed class FileSettingsStore : ISettingsStore
     private sealed class Data
     {
         public int ZoomPercent { get; set; } = 100;
+
+        public int ContentZoomPercent { get; set; } = 100;
     }
 
     private readonly string _path;
@@ -46,6 +51,21 @@ public sealed class FileSettingsStore : ISettingsStore
             }
 
             _data.ZoomPercent = value;
+            Save();
+        }
+    }
+
+    public int ContentZoomPercent
+    {
+        get => _data.ContentZoomPercent;
+        set
+        {
+            if (_data.ContentZoomPercent == value)
+            {
+                return;
+            }
+
+            _data.ContentZoomPercent = value;
             Save();
         }
     }

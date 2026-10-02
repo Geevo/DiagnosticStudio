@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using DiagnosticStudio.App.Services;
 using DiagnosticStudio.App.ViewModels;
+using DiagnosticStudio.App.Views;
 
 namespace DiagnosticStudio.App;
 
@@ -28,10 +29,10 @@ public partial class MainWindow : Window
 
     private MainWindowViewModel ViewModel => (MainWindowViewModel)DataContext;
 
-    // Ctrl + mouse wheel zooms the interface, wherever the pointer is.
+    // Ctrl + mouse wheel zooms the interface, except over a document, which has a zoom of its own.
     private void Window_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
-        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && !ScaledContent.Contains(e.OriginalSource as DependencyObject))
         {
             ViewModel.Zoom.Wheel(e.Delta);
             e.Handled = true;

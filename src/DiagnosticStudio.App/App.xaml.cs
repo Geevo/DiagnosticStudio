@@ -155,6 +155,7 @@ public partial class App : Application
         services.AddSingleton<SearchResultsViewModel>();
         services.AddSingleton<StatusBarViewModel>();
         services.AddSingleton<ZoomViewModel>();
+        services.AddSingleton<ContentZoomViewModel>();
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<MainWindow>();
 

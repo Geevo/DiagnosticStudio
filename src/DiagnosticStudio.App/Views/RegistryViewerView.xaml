@@ -70,88 +70,90 @@
                         </StackPanel>
                     </Border>
 
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="320" MinWidth="120" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" MinWidth="200" />
-                        </Grid.ColumnDefinitions>
+                    <local:ScaledContent>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="320" MinWidth="120" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" MinWidth="200" />
+                            </Grid.ColumnDefinitions>
 
-                        <!-- Key tree -->
-                        <TreeView x:Name="KeyTree" Grid.Column="0" ItemsSource="{Binding Roots}" Loaded="OnTreeLoaded"
-                                  ItemContainerStyle="{StaticResource KeyItemStyle}" BorderThickness="0"
-                                  VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
-                            <TreeView.ItemTemplate>
-                                <HierarchicalDataTemplate DataType="{x:Type rv:RegistryKeyNodeViewModel}" ItemsSource="{Binding Children}">
-                                    <StackPanel Orientation="Horizontal" ToolTip="{Binding ToolTip}">
-                                        <TextBlock Text="&#xE8B7;" FontFamily="{StaticResource IconFont}"
-                                                   Foreground="{DynamicResource MutedTextBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
-                                        <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" />
-                                    </StackPanel>
-                                </HierarchicalDataTemplate>
-                            </TreeView.ItemTemplate>
-                        </TreeView>
+                            <!-- Key tree -->
+                            <TreeView x:Name="KeyTree" Grid.Column="0" ItemsSource="{Binding Roots}" Loaded="OnTreeLoaded"
+                                      ItemContainerStyle="{StaticResource KeyItemStyle}" BorderThickness="0"
+                                      VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+                                <TreeView.ItemTemplate>
+                                    <HierarchicalDataTemplate DataType="{x:Type rv:RegistryKeyNodeViewModel}" ItemsSource="{Binding Children}">
+                                        <StackPanel Orientation="Horizontal" ToolTip="{Binding ToolTip}">
+                                            <TextBlock Text="&#xE8B7;" FontFamily="{StaticResource IconFont}"
+                                                       Foreground="{DynamicResource MutedTextBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </HierarchicalDataTemplate>
+                                </TreeView.ItemTemplate>
+                            </TreeView>
 
-                        <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="{DynamicResource BorderBrush}" />
+                            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="{DynamicResource BorderBrush}" />
 
-                        <!-- Values -->
-                        <Grid Grid.Column="2">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" MinHeight="80" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="110" MinHeight="40" />
-                            </Grid.RowDefinitions>
+                            <!-- Values -->
+                            <Grid Grid.Column="2">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" MinHeight="80" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="110" MinHeight="40" />
+                                </Grid.RowDefinitions>
 
-                            <Border Grid.Row="0" Background="{DynamicResource PanelHeaderBrush}" Padding="6,4">
-                                <DockPanel>
-                                    <Button DockPanel.Dock="Right" Content="Raw source" Margin="6,0,0,0" Padding="8,2"
-                                            Command="{Binding ShowInRawSourceCommand}" ToolTip="Show the selected key or value in the raw source" />
-                                    <Button DockPanel.Dock="Right" Content="Copy value" Margin="6,0,0,0" Padding="8,2"
-                                            Click="OnCopyValue" ToolTip="Copy the selected value's data" />
-                                    <Button DockPanel.Dock="Right" Content="Copy path" Margin="6,0,0,0" Padding="8,2"
-                                            Click="OnCopyPath" ToolTip="Copy the selected key path" />
-                                    <TextBox Text="{Binding SelectedKeyPath, Mode=OneWay}" IsReadOnly="True"
-                                             BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"
-                                             FontFamily="{StaticResource MonoFont}" />
-                                </DockPanel>
-                            </Border>
+                                <Border Grid.Row="0" Background="{DynamicResource PanelHeaderBrush}" Padding="6,4">
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right" Content="Raw source" Margin="6,0,0,0" Padding="8,2"
+                                                Command="{Binding ShowInRawSourceCommand}" ToolTip="Show the selected key or value in the raw source" />
+                                        <Button DockPanel.Dock="Right" Content="Copy value" Margin="6,0,0,0" Padding="8,2"
+                                                Click="OnCopyValue" ToolTip="Copy the selected value's data" />
+                                        <Button DockPanel.Dock="Right" Content="Copy path" Margin="6,0,0,0" Padding="8,2"
+                                                Click="OnCopyPath" ToolTip="Copy the selected key path" />
+                                        <TextBox Text="{Binding SelectedKeyPath, Mode=OneWay}" IsReadOnly="True"
+                                                 BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"
+                                                 FontFamily="{StaticResource MonoFont}" />
+                                    </DockPanel>
+                                </Border>
 
-                            <ListView x:Name="ValueList" Grid.Row="1" ItemsSource="{Binding Values}"
-                                      SelectedItem="{Binding SelectedValue, Mode=TwoWay}" SelectionMode="Single"
-                                      ItemContainerStyle="{StaticResource ValueRowStyle}" BorderThickness="0"
-                                      VirtualizingPanel.IsVirtualizing="True">
-                                <ListView.View>
-                                    <GridView>
-                                        <GridViewColumn Header="Name" Width="200">
-                                            <GridViewColumn.CellTemplate>
-                                                <DataTemplate DataType="{x:Type docs:RegistryValue}">
-                                                    <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis"
-                                                               ToolTip="{Binding DisplayName}" />
-                                                </DataTemplate>
-                                            </GridViewColumn.CellTemplate>
-                                        </GridViewColumn>
-                                        <GridViewColumn Header="Type" Width="150" DisplayMemberBinding="{Binding TypeName}" />
-                                        <GridViewColumn Header="Value" Width="520">
-                                            <GridViewColumn.CellTemplate>
-                                                <DataTemplate DataType="{x:Type docs:RegistryValue}">
-                                                    <TextBlock Text="{Binding DisplayValue}" TextTrimming="CharacterEllipsis"
-                                                               ToolTip="{Binding DisplayValue}" />
-                                                </DataTemplate>
-                                            </GridViewColumn.CellTemplate>
-                                        </GridViewColumn>
-                                    </GridView>
-                                </ListView.View>
-                            </ListView>
+                                <ListView x:Name="ValueList" Grid.Row="1" ItemsSource="{Binding Values}"
+                                          SelectedItem="{Binding SelectedValue, Mode=TwoWay}" SelectionMode="Single"
+                                          ItemContainerStyle="{StaticResource ValueRowStyle}" BorderThickness="0"
+                                          VirtualizingPanel.IsVirtualizing="True">
+                                    <ListView.View>
+                                        <GridView>
+                                            <GridViewColumn Header="Name" Width="200">
+                                                <GridViewColumn.CellTemplate>
+                                                    <DataTemplate DataType="{x:Type docs:RegistryValue}">
+                                                        <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis"
+                                                                   ToolTip="{Binding DisplayName}" />
+                                                    </DataTemplate>
+                                                </GridViewColumn.CellTemplate>
+                                            </GridViewColumn>
+                                            <GridViewColumn Header="Type" Width="150" DisplayMemberBinding="{Binding TypeName}" />
+                                            <GridViewColumn Header="Value" Width="520">
+                                                <GridViewColumn.CellTemplate>
+                                                    <DataTemplate DataType="{x:Type docs:RegistryValue}">
+                                                        <TextBlock Text="{Binding DisplayValue}" TextTrimming="CharacterEllipsis"
+                                                                   ToolTip="{Binding DisplayValue}" />
+                                                    </DataTemplate>
+                                                </GridViewColumn.CellTemplate>
+                                            </GridViewColumn>
+                                        </GridView>
+                                    </ListView.View>
+                                </ListView>
 
-                            <GridSplitter Grid.Row="2" Height="4" HorizontalAlignment="Stretch" Background="{DynamicResource BorderBrush}" />
+                                <GridSplitter Grid.Row="2" Height="4" HorizontalAlignment="Stretch" Background="{DynamicResource BorderBrush}" />
 
-                            <TextBox Grid.Row="3" Text="{Binding DetailText, Mode=OneWay}" IsReadOnly="True"
-                                     FontFamily="{StaticResource MonoFont}" FontSize="12" BorderThickness="0"
-                                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                                     TextWrapping="NoWrap" Padding="6,4" />
+                                <TextBox Grid.Row="3" Text="{Binding DetailText, Mode=OneWay}" IsReadOnly="True"
+                                         FontFamily="{StaticResource MonoFont}" FontSize="12" BorderThickness="0"
+                                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                                         TextWrapping="NoWrap" Padding="6,4" />
+                            </Grid>
                         </Grid>
-                    </Grid>
+                    </local:ScaledContent>
                 </DockPanel>
             </TabItem>
 

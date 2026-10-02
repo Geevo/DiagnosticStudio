@@ -25,6 +25,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         OutputViewModel output,
         StatusBarViewModel statusBar,
         ZoomViewModel zoom,
+        ContentZoomViewModel contentZoom,
         IFileDialogService dialogs)
     {
         Workspace = workspace;
@@ -35,6 +36,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Output = output;
         StatusBar = statusBar;
         Zoom = zoom;
+        ContentZoom = contentZoom;
         _dialogs = dialogs;
 
         // A new search brings the results panel forward.
@@ -57,6 +59,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public OutputViewModel Output { get; }
     public StatusBarViewModel StatusBar { get; }
     public ZoomViewModel Zoom { get; }
+    public ContentZoomViewModel ContentZoom { get; }
 
     public string Title => Workspace.BundleName is { } name
         ? $"{name} — Diagnostic Studio"

@@ -120,32 +120,34 @@
             </DockPanel>
         </Border>
 
-        <ListBox x:Name="LineList" ItemsSource="{Binding Lines}" ItemTemplate="{StaticResource LineTemplate}"
-                 ItemContainerStyle="{StaticResource LineItemStyle}"
-                 SelectionMode="Extended" BorderThickness="0"
-                 FontFamily="{StaticResource MonoFont}" FontSize="12"
-                 VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
-                 VirtualizingPanel.ScrollUnit="Item" ScrollViewer.CanContentScroll="True"
-                 SelectionChanged="OnSelectionChanged"
-                 PreviewMouseLeftButtonDown="OnListMouseDown" PreviewMouseMove="OnListMouseMove"
-                 PreviewMouseLeftButtonUp="OnListMouseUp" LostMouseCapture="OnListLostCapture">
-            <ListBox.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="Copy" Command="ApplicationCommands.Copy" InputGestureText="Ctrl+C"
-                              CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
-                    <MenuItem Header="Select all" InputGestureText="Ctrl+A" Click="OnSelectAllClick" />
-                </ContextMenu>
-            </ListBox.ContextMenu>
-            <ListBox.Style>
-                <Style TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
-                    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding WrapText}" Value="True">
-                            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </ListBox.Style>
-        </ListBox>
+        <local:ScaledContent>
+            <ListBox x:Name="LineList" ItemsSource="{Binding Lines}" ItemTemplate="{StaticResource LineTemplate}"
+                     ItemContainerStyle="{StaticResource LineItemStyle}"
+                     SelectionMode="Extended" BorderThickness="0"
+                     FontFamily="{StaticResource MonoFont}" FontSize="12"
+                     VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                     VirtualizingPanel.ScrollUnit="Item" ScrollViewer.CanContentScroll="True"
+                     SelectionChanged="OnSelectionChanged"
+                     PreviewMouseLeftButtonDown="OnListMouseDown" PreviewMouseMove="OnListMouseMove"
+                     PreviewMouseLeftButtonUp="OnListMouseUp" LostMouseCapture="OnListLostCapture">
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Copy" Command="ApplicationCommands.Copy" InputGestureText="Ctrl+C"
+                                  CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                        <MenuItem Header="Select all" InputGestureText="Ctrl+A" Click="OnSelectAllClick" />
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+                <ListBox.Style>
+                    <Style TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
+                        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding WrapText}" Value="True">
+                                <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ListBox.Style>
+            </ListBox>
+        </local:ScaledContent>
     </DockPanel>
 </UserControl>

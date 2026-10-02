@@ -48,64 +48,66 @@
                         </StackPanel>
                     </Border>
 
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" MinWidth="200" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="360" MinWidth="160" />
-                        </Grid.ColumnDefinitions>
+                    <local:ScaledContent>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" MinWidth="200" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="360" MinWidth="160" />
+                            </Grid.ColumnDefinitions>
 
-                        <!-- Node tree -->
-                        <TreeView x:Name="NodeTree" Grid.Column="0" ItemsSource="{Binding Roots}" Loaded="OnTreeLoaded"
-                                  ItemContainerStyle="{StaticResource NodeItemStyle}" BorderThickness="0"
-                                  VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
-                            <TreeView.ItemTemplate>
-                                <HierarchicalDataTemplate DataType="{x:Type sv:StructuredNodeViewModel}" ItemsSource="{Binding Children}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding Glyph}" FontFamily="{StaticResource MonoFont}" FontSize="11"
-                                                   Width="22" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-                                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                        <TextBlock Text="{Binding Summary}" Margin="10,0,0,0" VerticalAlignment="Center"
-                                                   FontFamily="{StaticResource MonoFont}" FontSize="11.5"
-                                                   Foreground="{DynamicResource MutedTextBrush}" />
-                                    </StackPanel>
-                                </HierarchicalDataTemplate>
-                            </TreeView.ItemTemplate>
-                        </TreeView>
+                            <!-- Node tree -->
+                            <TreeView x:Name="NodeTree" Grid.Column="0" ItemsSource="{Binding Roots}" Loaded="OnTreeLoaded"
+                                      ItemContainerStyle="{StaticResource NodeItemStyle}" BorderThickness="0"
+                                      VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+                                <TreeView.ItemTemplate>
+                                    <HierarchicalDataTemplate DataType="{x:Type sv:StructuredNodeViewModel}" ItemsSource="{Binding Children}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Glyph}" FontFamily="{StaticResource MonoFont}" FontSize="11"
+                                                       Width="22" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Summary}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                                       FontFamily="{StaticResource MonoFont}" FontSize="11.5"
+                                                       Foreground="{DynamicResource MutedTextBrush}" />
+                                        </StackPanel>
+                                    </HierarchicalDataTemplate>
+                                </TreeView.ItemTemplate>
+                            </TreeView>
 
-                        <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="{DynamicResource BorderBrush}" />
+                            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="{DynamicResource BorderBrush}" />
 
-                        <!-- Detail -->
-                        <Grid Grid.Column="2">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
-                            </Grid.RowDefinitions>
+                            <!-- Detail -->
+                            <Grid Grid.Column="2">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
 
-                            <Border Grid.Row="0" Background="{DynamicResource PanelHeaderBrush}" Padding="6,4">
-                                <DockPanel>
-                                    <Button DockPanel.Dock="Right" Content="Raw" Margin="6,0,0,0" Padding="8,2"
-                                            Command="{Binding ShowInRawSourceCommand}" ToolTip="Show the selected node in the raw source" />
-                                    <Button DockPanel.Dock="Right" Content="Copy value" Margin="6,0,0,0" Padding="8,2"
-                                            Click="OnCopyValue" ToolTip="Copy the selected node's value" />
-                                    <Button DockPanel.Dock="Right" Content="Copy path" Margin="6,0,0,0" Padding="8,2"
-                                            Click="OnCopyPath" ToolTip="Copy the selected node's path" />
-                                    <TextBox Text="{Binding SelectedPath, Mode=OneWay}" IsReadOnly="True"
-                                             BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"
-                                             FontFamily="{StaticResource MonoFont}" />
-                                </DockPanel>
-                            </Border>
+                                <Border Grid.Row="0" Background="{DynamicResource PanelHeaderBrush}" Padding="6,4">
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right" Content="Raw" Margin="6,0,0,0" Padding="8,2"
+                                                Command="{Binding ShowInRawSourceCommand}" ToolTip="Show the selected node in the raw source" />
+                                        <Button DockPanel.Dock="Right" Content="Copy value" Margin="6,0,0,0" Padding="8,2"
+                                                Click="OnCopyValue" ToolTip="Copy the selected node's value" />
+                                        <Button DockPanel.Dock="Right" Content="Copy path" Margin="6,0,0,0" Padding="8,2"
+                                                Click="OnCopyPath" ToolTip="Copy the selected node's path" />
+                                        <TextBox Text="{Binding SelectedPath, Mode=OneWay}" IsReadOnly="True"
+                                                 BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"
+                                                 FontFamily="{StaticResource MonoFont}" />
+                                    </DockPanel>
+                                </Border>
 
-                            <TextBlock Grid.Row="1" Text="{Binding DetailInfo}" Margin="8,4" TextWrapping="Wrap"
-                                       Foreground="{DynamicResource MutedTextBrush}" />
+                                <TextBlock Grid.Row="1" Text="{Binding DetailInfo}" Margin="8,4" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource MutedTextBrush}" />
 
-                            <TextBox Grid.Row="2" Text="{Binding DetailText, Mode=OneWay}" IsReadOnly="True"
-                                     FontFamily="{StaticResource MonoFont}" FontSize="12" BorderThickness="0"
-                                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                                     TextWrapping="NoWrap" Padding="6,4" />
+                                <TextBox Grid.Row="2" Text="{Binding DetailText, Mode=OneWay}" IsReadOnly="True"
+                                         FontFamily="{StaticResource MonoFont}" FontSize="12" BorderThickness="0"
+                                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                                         TextWrapping="NoWrap" Padding="6,4" />
+                            </Grid>
                         </Grid>
-                    </Grid>
+                    </local:ScaledContent>
                 </DockPanel>
             </TabItem>
 

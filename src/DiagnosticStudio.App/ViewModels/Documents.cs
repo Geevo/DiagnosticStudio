@@ -27,6 +27,9 @@ public abstract partial class DocumentViewModel : ObservableObject
     public virtual string? ToolTip => null;
     public virtual bool CanClose => true;
 
+    /// <summary>Whether the document pane's zoom applies to what this document shows.</summary>
+    public virtual bool SupportsContentZoom => true;
+
     /// <summary>Evidence location for documents tied to an artifact; <c>null</c> for the Overview.</summary>
     public virtual DiagnosticLocation? Location => null;
 
@@ -162,7 +165,11 @@ public sealed partial class ArtifactDocumentViewModel : DocumentViewModel
 
     /// <summary>Content viewer for the parsed document; <c>null</c> while loading or when only metadata can be shown.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SupportsContentZoom))]
     private object? _viewer;
+
+    // A web page is a browser surface with its own zoom (Ctrl+wheel over it).
+    public override bool SupportsContentZoom => Viewer is not HtmlViewerViewModel;
 
     private DiagnosticLocation? _pendingLocation;
     private SearchHighlight? _pendingHighlight;

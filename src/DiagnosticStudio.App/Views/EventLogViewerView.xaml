@@ -89,97 +89,99 @@
             </DockPanel>
         </Border>
 
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*" MinHeight="120" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="200" MinHeight="60" />
-            </Grid.RowDefinitions>
+        <local:ScaledContent>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" MinHeight="120" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="200" MinHeight="60" />
+                </Grid.RowDefinitions>
 
-            <!-- Event table -->
-            <ListView x:Name="EventList" Grid.Row="0" ItemsSource="{Binding Events}"
-                      SelectedItem="{Binding SelectedEvent, Mode=TwoWay}" SelectionMode="Single"
-                      ItemContainerStyle="{StaticResource EventRowStyle}" BorderThickness="0"
-                      VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
-                      VirtualizingPanel.ScrollUnit="Item" ScrollViewer.CanContentScroll="True">
-                <ListView.View>
-                    <GridView>
-                        <GridViewColumn Header="Time (UTC)" Width="170" DisplayMemberBinding="{Binding TimeText}" />
-                        <GridViewColumn Header="Level" Width="95" DisplayMemberBinding="{Binding LevelName}" />
-                        <GridViewColumn Header="Provider" Width="230" DisplayMemberBinding="{Binding Provider}" />
-                        <GridViewColumn Header="Event ID" Width="75" DisplayMemberBinding="{Binding EventId}" />
-                        <GridViewColumn Header="Record" Width="80" DisplayMemberBinding="{Binding RecordId}" />
-                        <GridViewColumn Header="Message" Width="900">
-                            <GridViewColumn.CellTemplate>
-                                <DataTemplate DataType="{x:Type ev:EventRowViewModel}">
-                                    <TextBlock Text="{Binding MessagePreview}" Style="{StaticResource MessagePreviewStyle}" />
-                                </DataTemplate>
-                            </GridViewColumn.CellTemplate>
-                        </GridViewColumn>
-                    </GridView>
-                </ListView.View>
-            </ListView>
+                <!-- Event table -->
+                <ListView x:Name="EventList" Grid.Row="0" ItemsSource="{Binding Events}"
+                          SelectedItem="{Binding SelectedEvent, Mode=TwoWay}" SelectionMode="Single"
+                          ItemContainerStyle="{StaticResource EventRowStyle}" BorderThickness="0"
+                          VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                          VirtualizingPanel.ScrollUnit="Item" ScrollViewer.CanContentScroll="True">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Time (UTC)" Width="170" DisplayMemberBinding="{Binding TimeText}" />
+                            <GridViewColumn Header="Level" Width="95" DisplayMemberBinding="{Binding LevelName}" />
+                            <GridViewColumn Header="Provider" Width="230" DisplayMemberBinding="{Binding Provider}" />
+                            <GridViewColumn Header="Event ID" Width="75" DisplayMemberBinding="{Binding EventId}" />
+                            <GridViewColumn Header="Record" Width="80" DisplayMemberBinding="{Binding RecordId}" />
+                            <GridViewColumn Header="Message" Width="900">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate DataType="{x:Type ev:EventRowViewModel}">
+                                        <TextBlock Text="{Binding MessagePreview}" Style="{StaticResource MessagePreviewStyle}" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
 
-            <GridSplitter Grid.Row="1" Height="4" HorizontalAlignment="Stretch" Background="{DynamicResource BorderBrush}" />
+                <GridSplitter Grid.Row="1" Height="4" HorizontalAlignment="Stretch" Background="{DynamicResource BorderBrush}" />
 
-            <!-- Detail -->
-            <TabControl Grid.Row="2" BorderThickness="0,1,0,0" SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
-                <TabItem Header="Details">
-                    <Grid>
-                    <TextBlock Text="Select an event to see its details." Margin="14,12" Foreground="{DynamicResource MutedTextBrush}">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SelectedDetail}" Value="{x:Null}">
-                                        <Setter Property="Visibility" Value="Visible" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" DataContext="{Binding SelectedDetail}"
-                                  Visibility="{Binding RelativeSource={RelativeSource Self}, Path=DataContext, Converter={x:Static local:NullToVisibilityConverter.Instance}}">
-                        <StackPanel Margin="14,10,14,14" MaxWidth="1000" HorizontalAlignment="Left">
-                            <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" />
-                            <TextBox Text="{Binding Message, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"
-                                     BorderThickness="0" Background="Transparent" Margin="0,8,0,0" Padding="0"
-                                     Visibility="{Binding Message, Converter={x:Static local:NullToVisibilityConverter.Instance}}" />
-                            <TextBlock Text="{Binding Note}" TextWrapping="Wrap" Margin="0,6,0,0" FontStyle="Italic"
-                                       Foreground="{DynamicResource MutedTextBrush}" />
-                            <TextBlock Text="EVENT" Style="{StaticResource SectionHeader}" />
-                            <ItemsControl ItemsSource="{Binding Fields}" ItemTemplate="{StaticResource DetailRowTemplate}"
-                                          Grid.IsSharedSizeScope="True" />
-                            <TextBlock Text="{Binding DataTitle}">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock" BasedOn="{StaticResource SectionHeader}">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding HasData}" Value="False">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                            <ItemsControl ItemsSource="{Binding Data}" ItemTemplate="{StaticResource DetailRowTemplate}"
-                                          Grid.IsSharedSizeScope="True" />
-                        </StackPanel>
-                    </ScrollViewer>
-                    </Grid>
-                </TabItem>
-                <TabItem Header="XML">
-                    <DockPanel>
-                        <Border DockPanel.Dock="Top" Background="{DynamicResource PanelBrush}" Padding="6,3"
-                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-                            <Button Content="Copy XML" HorizontalAlignment="Left" Padding="8,2" Click="OnCopyXml" />
-                        </Border>
-                        <TextBox Text="{Binding SelectedDetail.Xml, Mode=OneWay}" IsReadOnly="True"
-                                 FontFamily="{StaticResource MonoFont}" FontSize="12" BorderThickness="0"
-                                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                                 TextWrapping="NoWrap" Padding="8,6" />
-                    </DockPanel>
-                </TabItem>
-            </TabControl>
-        </Grid>
+                <!-- Detail -->
+                <TabControl Grid.Row="2" BorderThickness="0,1,0,0" SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
+                    <TabItem Header="Details">
+                        <Grid>
+                        <TextBlock Text="Select an event to see its details." Margin="14,12" Foreground="{DynamicResource MutedTextBrush}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedDetail}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" DataContext="{Binding SelectedDetail}"
+                                      Visibility="{Binding RelativeSource={RelativeSource Self}, Path=DataContext, Converter={x:Static local:NullToVisibilityConverter.Instance}}">
+                            <StackPanel Margin="14,10,14,14" MaxWidth="1000" HorizontalAlignment="Left">
+                                <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" />
+                                <TextBox Text="{Binding Message, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"
+                                         BorderThickness="0" Background="Transparent" Margin="0,8,0,0" Padding="0"
+                                         Visibility="{Binding Message, Converter={x:Static local:NullToVisibilityConverter.Instance}}" />
+                                <TextBlock Text="{Binding Note}" TextWrapping="Wrap" Margin="0,6,0,0" FontStyle="Italic"
+                                           Foreground="{DynamicResource MutedTextBrush}" />
+                                <TextBlock Text="EVENT" Style="{StaticResource SectionHeader}" />
+                                <ItemsControl ItemsSource="{Binding Fields}" ItemTemplate="{StaticResource DetailRowTemplate}"
+                                              Grid.IsSharedSizeScope="True" />
+                                <TextBlock Text="{Binding DataTitle}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource SectionHeader}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasData}" Value="False">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <ItemsControl ItemsSource="{Binding Data}" ItemTemplate="{StaticResource DetailRowTemplate}"
+                                              Grid.IsSharedSizeScope="True" />
+                            </StackPanel>
+                        </ScrollViewer>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="XML">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Top" Background="{DynamicResource PanelBrush}" Padding="6,3"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                                <Button Content="Copy XML" HorizontalAlignment="Left" Padding="8,2" Click="OnCopyXml" />
+                            </Border>
+                            <TextBox Text="{Binding SelectedDetail.Xml, Mode=OneWay}" IsReadOnly="True"
+                                     FontFamily="{StaticResource MonoFont}" FontSize="12" BorderThickness="0"
+                                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                                     TextWrapping="NoWrap" Padding="8,6" />
+                        </DockPanel>
+                    </TabItem>
+                </TabControl>
+            </Grid>
+        </local:ScaledContent>
     </DockPanel>
 </UserControl>

@@ -14,6 +14,7 @@ public sealed class ZoomViewModelTests : IDisposable
     private sealed class MemorySettings : ISettingsStore
     {
         public int ZoomPercent { get; set; } = 100;
+        public int ContentZoomPercent { get; set; } = 100;
         public int Saves { get; private set; }
 
         int ISettingsStore.ZoomPercent
@@ -197,6 +198,78 @@ public sealed class ZoomViewModelTests : IDisposable
         Assert.True(await BecomesAsync(() => zoom.IsIndicatorVisible, expected: false));
     }
 
+    // ---- the editable box ----
+
+    [Theory]
+    [InlineData("125", 125)]
+    [InlineData("125%", 125)]
+    [InlineData(" 125 % ", 125)]
+    [InlineData("10", 50)]
+    [InlineData("9999", 300)]
+    [InlineData("abc", 100)]
+    [InlineData("", 100)]
+    public void Typed_text_sets_the_level_within_the_limits(string typed, int expected)
+    {
+        var zoom = new ZoomViewModel(new MemorySettings());
+
+        zoom.Entry = typed;
+
+        Assert.Equal(expected, zoom.Percent);
+        Assert.Equal($"{expected} %", zoom.Entry);
+    }
+
+    [Fact]
+    public void Rejected_text_is_replaced_by_the_current_level_in_the_box()
+    {
+        var zoom = new ZoomViewModel(new MemorySettings { ZoomPercent = 140 });
+        var changed = new List<string?>();
+        zoom.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        zoom.Entry = "abc";
+
+        Assert.Contains(nameof(ZoomViewModel.Entry), changed);
+        Assert.Equal("140 %", zoom.Entry);
+    }
+
+    [Fact]
+    public void Every_preset_is_a_level_that_can_be_chosen()
+    {
+        foreach (var preset in ZoomViewModel.Presets)
+        {
+            var zoom = new ZoomViewModel(new MemorySettings());
+            zoom.Entry = preset;
+            Assert.Equal(preset, zoom.Entry);
+            Assert.InRange(zoom.Percent, ZoomViewModel.Minimum, ZoomViewModel.Maximum);
+        }
+    }
+
+    // ---- the document pane has a level of its own ----
+
+    [Fact]
+    public void The_document_zoom_is_separate_from_the_interface_zoom_and_saved_on_its_own()
+    {
+        var settings = new MemorySettings { ZoomPercent = 120, ContentZoomPercent = 150 };
+        var ui = new ZoomViewModel(settings);
+        var content = new ContentZoomViewModel(settings);
+
+        Assert.Equal(120, ui.Percent);
+        Assert.Equal(150, content.Percent);
+
+        content.ZoomInCommand.Execute(null);
+
+        Assert.Equal(160, settings.ContentZoomPercent);
+        Assert.Equal(120, settings.ZoomPercent);
+        Assert.Equal(120, ui.Percent);
+    }
+
+    [Fact]
+    public void The_document_zoom_has_the_same_limits()
+    {
+        var settings = new MemorySettings { ContentZoomPercent = 9000 };
+
+        Assert.Equal(ZoomViewModel.Maximum, new ContentZoomViewModel(settings).Percent);
+    }
+
     // ---- the file the setting lives in ----
 
     [Fact]
@@ -207,6 +280,24 @@ public sealed class ZoomViewModelTests : IDisposable
         new FileSettingsStore(path).ZoomPercent = 150;
 
         Assert.Equal(150, new FileSettingsStore(path).ZoomPercent);
+    }
+
+    [Fact]
+    public void The_file_store_keeps_the_two_levels_apart_and_defaults_the_new_one()
+    {
+        var path = Path.Combine(_dir, "two", "settings.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, "{ \"ZoomPercent\": 130 }");   // a file from before the document zoom existed
+
+        var store = new FileSettingsStore(path);
+        Assert.Equal(130, store.ZoomPercent);
+        Assert.Equal(100, store.ContentZoomPercent);
+
+        store.ContentZoomPercent = 175;
+
+        var again = new FileSettingsStore(path);
+        Assert.Equal(130, again.ZoomPercent);
+        Assert.Equal(175, again.ContentZoomPercent);
     }
 
     [Fact]

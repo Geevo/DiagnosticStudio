@@ -31,7 +31,8 @@ public sealed partial class RepeatedLogErrorRule : IDocumentRule
 
     public IEnumerable<Finding> Evaluate(DiagnosticArtifact artifact, DiagnosticDocument document, CancellationToken cancellationToken)
     {
-        if (document is not TextDocument text)
+        // CMTrace logs open as tables but are still logs of lines; the rule reads the text of either.
+        if (document is not (TextDocument or TableDocument) || DocumentText.LinesOf(document) is not { } lines)
         {
             yield break;
         }
@@ -40,7 +41,7 @@ public sealed partial class RepeatedLogErrorRule : IDocumentRule
         var lineNumber = 0;
         var totalErrors = 0;
 
-        foreach (var line in text.Lines.EnumerateLines())
+        foreach (var line in lines.EnumerateLines())
         {
             lineNumber++;
             if ((lineNumber & 0xFFFF) == 0)
@@ -68,7 +69,7 @@ public sealed partial class RepeatedLogErrorRule : IDocumentRule
                     continue;
                 }
 
-                groups[signature] = group = new Group(line.Length > SampleLength ? line[..SampleLength] + "…" : line);
+                groups[signature] = group = new Group(Sample(line));
             }
 
             group.Add(lineNumber, info.Timestamp);
@@ -125,6 +126,25 @@ public sealed partial class RepeatedLogErrorRule : IDocumentRule
                 Tags = new[] { "log", "error" },
             };
         }
+    }
+
+    /// <summary>
+    /// The line as shown in the finding. A CMTrace record is shown as its message: the markers and attributes around it
+    /// (<c>&lt;![LOG[...]LOG]!&gt;&lt;time=... type="3"&gt;</c>) are noise to someone reading the finding.
+    /// </summary>
+    internal static string Sample(string line)
+    {
+        const string start = "<![LOG[";
+        const string end = "]LOG]!>";
+        var from = line.IndexOf(start, StringComparison.Ordinal);
+        if (from >= 0)
+        {
+            from += start.Length;
+            var to = line.IndexOf(end, from, StringComparison.Ordinal);
+            line = (to >= 0 ? line[from..to] : line[from..]).Trim();
+        }
+
+        return line.Length > SampleLength ? line[..SampleLength] + "…" : line;
     }
 
     // Cheap prefilter so the analyzer's regexes only run on lines that can possibly be errors.

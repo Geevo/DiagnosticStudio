@@ -109,6 +109,12 @@ public interface IEventMessageFormatter
     string? Format(string provider, uint eventId, int? qualifiers, int version, IReadOnlyList<EventDataItem> data);
 }
 
+/// <summary>A source that holds its events in memory and can say roughly how much, so the document cache can account for it.</summary>
+public interface IMemorySizedSource
+{
+    long ApproximateMemoryBytes { get; }
+}
+
 public sealed record EventLogDocument : DiagnosticDocument
 {
     public required IEventLogSource Source { get; init; }
@@ -117,6 +123,12 @@ public sealed record EventLogDocument : DiagnosticDocument
     public IReadOnlyList<EventLogIssue> Issues { get; init; } = Array.Empty<EventLogIssue>();
 
     public int TotalIssueCount { get; init; }
+
+    /// <summary>
+    /// Things to know about the events shown that are not damage: only the first part of a very large log was read, or
+    /// some events could not be described on this machine. Shown in the viewer and listed as file problems.
+    /// </summary>
+    public IReadOnlyList<string> Notes { get; init; } = Array.Empty<string>();
 
     /// <summary>The header says the log was not cleanly closed (e.g. copied from a live system).</summary>
     public bool IsDirty { get; init; }

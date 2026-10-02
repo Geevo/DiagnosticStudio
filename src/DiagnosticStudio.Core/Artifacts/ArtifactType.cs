@@ -17,4 +17,7 @@ public enum ArtifactType
     Html,
     Trace,
     Binary,
+
+    /// <summary>Delimited text (<c>.csv</c>, <c>.tsv</c>), opened as a table.</summary>
+    Csv,
 }

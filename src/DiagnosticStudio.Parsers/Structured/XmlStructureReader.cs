@@ -20,24 +20,59 @@ public static class XmlStructureReader
         Stream stream,
         CancellationToken cancellationToken = default,
         int maxDepth = DefaultMaxDepth,
+        int maxNodes = DefaultMaxNodes) =>
+        Read(() => XmlReader.Create(stream, Settings()), cancellationToken, maxDepth, maxNodes);
+
+    /// <summary>
+    /// Reads text that is already decoded. The encoding named in an XML declaration is not applied, which is what is
+    /// wanted for text that was produced in memory.
+    /// </summary>
+    public static (StructuredNode Root, int NodeCount) Read(
+        TextReader text,
+        CancellationToken cancellationToken = default,
+        int maxDepth = DefaultMaxDepth,
+        int maxNodes = DefaultMaxNodes) =>
+        Read(() => XmlReader.Create(text, Settings()), cancellationToken, maxDepth, maxNodes);
+
+    /// <summary>Where, and why, reading stopped before the end of the text.</summary>
+    public sealed record ReadStop(string Message, int Line);
+
+    /// <summary>
+    /// Like <see cref="Read(Stream, CancellationToken, int, int)"/>, but text that stops being well-formed after at least
+    /// one element still gives the tree built up to that point, with the reason. Content that has no element at all, or
+    /// breaks a limit, still throws.
+    /// </summary>
+    public static (StructuredNode Root, int NodeCount, ReadStop? Stop) ReadTolerant(
+        Stream stream,
+        CancellationToken cancellationToken = default,
+        int maxDepth = DefaultMaxDepth,
         int maxNodes = DefaultMaxNodes)
     {
-        var settings = new XmlReaderSettings
-        {
-            DtdProcessing = DtdProcessing.Ignore,
-            XmlResolver = null,
-            ConformanceLevel = ConformanceLevel.Fragment,
-            IgnoreWhitespace = true,
-            IgnoreComments = false,
-            IgnoreProcessingInstructions = true,
-            CheckCharacters = false,
-            CloseInput = false,
-        };
+        using var reader = XmlReader.Create(stream, Settings());
+        ReadStop? stop = null;
+        var (root, count) = Build(reader, cancellationToken, maxDepth, maxNodes, tolerant: true, s => stop = s);
+        return (root, count, stop);
+    }
 
+    private static XmlReaderSettings Settings() => new()
+    {
+        DtdProcessing = DtdProcessing.Ignore,
+        XmlResolver = null,
+        ConformanceLevel = ConformanceLevel.Fragment,
+        IgnoreWhitespace = true,
+        IgnoreComments = false,
+        IgnoreProcessingInstructions = true,
+        CheckCharacters = false,
+        CloseInput = false,
+    };
+
+    private static (StructuredNode Root, int NodeCount) Read(
+        Func<XmlReader> open, CancellationToken cancellationToken, int maxDepth, int maxNodes)
+    {
         try
         {
-            using var reader = XmlReader.Create(stream, settings);
-            return Build(reader, cancellationToken, maxDepth, maxNodes);
+            using var reader = open();
+            return Build(reader, cancellationToken, maxDepth, maxNodes, tolerant: false, null);
         }
         catch (XmlException ex)
         {
@@ -45,7 +80,8 @@ public static class XmlStructureReader
         }
     }
 
-    private static (StructuredNode, int) Build(XmlReader reader, CancellationToken cancellationToken, int maxDepth, int maxNodes)
+    private static (StructuredNode, int) Build(
+        XmlReader reader, CancellationToken cancellationToken, int maxDepth, int maxNodes, bool tolerant, Action<ReadStop>? stopped)
     {
         var lineInfo = reader as IXmlLineInfo;
         var document = new StructuredNode(StructuredNodeKind.Document, null, null, 0, 1, null);
@@ -53,8 +89,21 @@ public static class XmlStructureReader
         frames.Push(new Frame(document));
         var count = 0;
 
-        while (reader.Read())
+        while (true)
         {
+            try
+            {
+                if (!reader.Read())
+                {
+                    break;
+                }
+            }
+            catch (XmlException ex) when (tolerant && document.Children.Any(c => c.Kind == StructuredNodeKind.Element))
+            {
+                stopped?.Invoke(new ReadStop(ex.Message, ex.LineNumber));
+                break;
+            }
+
             if ((count & 0xFFF) == 0)
             {
                 cancellationToken.ThrowIfCancellationRequested();

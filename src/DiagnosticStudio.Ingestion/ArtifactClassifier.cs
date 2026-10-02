@@ -105,6 +105,15 @@ public static class ArtifactClassifier
             case ".htm":
             case ".html":
                 return new(ArtifactType.Html, CategoryFor(name), null);
+            case ".csv":
+            case ".tsv":
+                // Only when it reads as text: a binary file with this extension is not a table.
+                if (header.Length == 0 || LooksLikeText(header))
+                {
+                    return new(ArtifactType.Csv, CategoryFor(name), null);
+                }
+
+                break;
         }
 
         if (BinaryExtensions.Contains(extension) || (header.Length > 0 && !LooksLikeText(header)))

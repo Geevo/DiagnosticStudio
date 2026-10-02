@@ -18,6 +18,7 @@ public sealed class TextLogParser : IDiagnosticParser
         ArtifactType.Xml,
         ArtifactType.Json,
         ArtifactType.Html,
+        ArtifactType.Csv,
         ArtifactType.RegistryExport,
     };
 

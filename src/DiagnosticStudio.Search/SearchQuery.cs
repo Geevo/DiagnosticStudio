@@ -65,6 +65,7 @@ public static class SearchQueryParser
         ["xml"] = ArtifactType.Xml,
         ["json"] = ArtifactType.Json,
         ["html"] = ArtifactType.Html,
+        ["csv"] = ArtifactType.Csv,
         ["archive"] = ArtifactType.Archive,
         ["zip"] = ArtifactType.Archive,
         ["cab"] = ArtifactType.Archive,

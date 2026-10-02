@@ -174,7 +174,7 @@ public sealed class GlobalSearchService : IGlobalSearchService
         SearchIssue? issue = null;
         // Event-only operators can only be satisfied by event logs, so other artifacts are not even opened.
         var contentRelevant = query.HasEventOperators
-            ? artifact.ArtifactType == ArtifactType.EventLog
+            ? artifact.ArtifactType is ArtifactType.EventLog or ArtifactType.Trace
             : query.Text.Length > 0;
         if (contentRelevant && HasSearchableContent(artifact))
         {
@@ -188,6 +188,12 @@ public sealed class GlobalSearchService : IGlobalSearchService
                         break;
                     // XML and JSON are searched as text, like any other file: a hit is a line, and the structured
                     // viewer resolves a line to the node it belongs to as well as to the raw source.
+                    case HtmlDocument html when !query.HasEventOperators:
+                        lowerBound |= SearchText(html.RawSource, artifact, query, options, comparison, hits, ct);
+                        break;
+                    case TableDocument table when !query.HasEventOperators:
+                        lowerBound |= SearchText(table.RawSource, artifact, query, options, comparison, hits, ct);
+                        break;
                     case StructuredDocument structured when !query.HasEventOperators:
                         lowerBound |= SearchText(structured.RawSource, artifact, query, options, comparison, hits, ct);
                         break;
@@ -247,7 +253,7 @@ public sealed class GlobalSearchService : IGlobalSearchService
     }
 
     private static bool HasSearchableContent(DiagnosticArtifact artifact) =>
-        artifact.ArtifactType is not (ArtifactType.Archive or ArtifactType.Binary or ArtifactType.Trace or ArtifactType.Unknown)
+        artifact.ArtifactType is not (ArtifactType.Archive or ArtifactType.Binary or ArtifactType.Unknown)
         && artifact.ExtractedPath is not null;
 
     // ---- per-type scanners; each returns true when its count is only a lower bound ----

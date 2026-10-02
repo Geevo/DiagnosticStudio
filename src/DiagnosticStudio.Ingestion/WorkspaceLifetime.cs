@@ -57,21 +57,33 @@ public sealed class WorkspaceLease : IDisposable
         }
 
         handle.Dispose();
-        try
+
+        // A viewer that was just closed, or a scanner looking at a new file, can still have something open for a
+        // moment, so a failed removal is tried again shortly. This runs off the interface thread. What still cannot
+        // be removed is left for the janitor on a later start.
+        for (var attempt = 0; attempt < RemovalAttempts; attempt++)
         {
-            if (Directory.Exists(WorkingDirectory))
+            try
             {
-                Directory.Delete(WorkingDirectory, recursive: true);
+                if (Directory.Exists(WorkingDirectory))
+                {
+                    Directory.Delete(WorkingDirectory, recursive: true);
+                }
+
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                if (attempt < RemovalAttempts - 1)
+                {
+                    Thread.Sleep(RetryDelayMilliseconds);
+                }
             }
         }
-        catch (IOException)
-        {
-            // A viewer or scanner still has a file open; the janitor reclaims the directory on a later start.
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
     }
+
+    private const int RemovalAttempts = 3;
+    private const int RetryDelayMilliseconds = 150;
 }
 
 public sealed record WorkspaceSweepResult(int Removed, int InUse, int Failed, IReadOnlyList<string> Errors)

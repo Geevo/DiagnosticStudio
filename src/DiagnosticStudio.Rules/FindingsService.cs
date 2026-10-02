@@ -17,11 +17,13 @@ public sealed class FindingsService : IFindingsService
 
     private readonly IDocumentLoader _loader;
     private readonly IReadOnlyList<IDocumentRule> _rules;
+    private readonly IBackgroundWorkGate _gate;
 
-    public FindingsService(IDocumentLoader loader, IEnumerable<IDocumentRule> rules)
+    public FindingsService(IDocumentLoader loader, IEnumerable<IDocumentRule> rules, IBackgroundWorkGate? gate = null)
     {
         _loader = loader;
         _rules = rules.ToList();
+        _gate = gate ?? UnlimitedWorkGate.Instance;
     }
 
     public async Task<FindingsResult> EvaluateAsync(
@@ -41,7 +43,11 @@ public sealed class FindingsService : IFindingsService
             new ParallelOptions { MaxDegreeOfParallelism = MaxParallelism, CancellationToken = cancellationToken },
             async (artifact, token) =>
             {
-                await EvaluateArtifactAsync(artifact, findings, issues, token).ConfigureAwait(false);
+                using (await _gate.EnterAsync(token).ConfigureAwait(false))
+                {
+                    await EvaluateArtifactAsync(artifact, findings, issues, token).ConfigureAwait(false);
+                }
+
                 progress?.Report(new FindingsProgress(Interlocked.Increment(ref done), candidates.Count));
             }).ConfigureAwait(false);
 

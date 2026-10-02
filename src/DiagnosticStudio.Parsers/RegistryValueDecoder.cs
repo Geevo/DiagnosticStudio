@@ -9,15 +9,31 @@ internal static class RegistryValueDecoder
 {
     private const int DisplayHexBytes = 64;
 
-    public static RegistryValue String(string name, bool isDefault, string text, int line) => new()
+    public static RegistryValue String(string name, bool isDefault, string text, int line) =>
+        Text(name, isDefault, RegistryValueKind.String, "REG_SZ", text, line);
+
+    /// <summary>A text value of one of the string types (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ), however the exporter spelled it.</summary>
+    public static RegistryValue Text(string name, bool isDefault, RegistryValueKind kind, string typeName, string text, int line)
     {
-        Name = name,
-        IsDefault = isDefault,
-        Kind = RegistryValueKind.String,
-        TypeName = "REG_SZ",
-        DisplayValue = text,
-        SourceLine = line,
-    };
+        // A value that holds several lines (an XML document, a script) would make its table row as tall as the
+        // text. The row shows it on one line; the detail pane has the text as stored.
+        var multiline = text.AsSpan().IndexOfAny('\r', '\n') >= 0;
+        return new()
+        {
+            Name = name,
+            IsDefault = isDefault,
+            Kind = kind,
+            TypeName = typeName,
+            DisplayValue = multiline ? OneLine(text) : text,
+            DetailText = multiline ? text : null,
+            SourceLine = line,
+        };
+    }
+
+    private static string OneLine(string text) =>
+        text.Replace("\r\n", " \u21B5 ", StringComparison.Ordinal)
+            .Replace("\n", " \u21B5 ", StringComparison.Ordinal)
+            .Replace("\r", " \u21B5 ", StringComparison.Ordinal);
 
     public static RegistryValue DWord(string name, bool isDefault, uint value, int line, bool bigEndian = false) => new()
     {

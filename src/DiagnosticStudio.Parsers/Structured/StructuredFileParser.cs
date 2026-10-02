@@ -27,16 +27,24 @@ public sealed class StructuredFileParser : IDiagnosticParser
         // The raw text is indexed first: it is what the engineer falls back to, and what every line link points into.
         var raw = await IndexedTextFile.OpenAsync(path, cancellationToken).ConfigureAwait(false);
 
-        var (root, count) = await Task.Run(
+        var (root, count, stop) = await Task.Run(
             () =>
             {
                 if (format == StructuredFormat.Xml)
                 {
                     using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 1 << 16);
-                    return XmlStructureReader.Read(stream, cancellationToken);
+                    try
+                    {
+                        return XmlStructureReader.ReadTolerant(stream, cancellationToken);
+                    }
+                    catch (System.Xml.XmlException ex)
+                    {
+                        throw new InvalidDataException($"Not well-formed XML: {ex.Message}", ex);
+                    }
                 }
 
-                return JsonStructureReader.Read(File.ReadAllBytes(path), cancellationToken);
+                var (jsonRoot, jsonCount) = JsonStructureReader.Read(File.ReadAllBytes(path), cancellationToken);
+                return (jsonRoot, jsonCount, (XmlStructureReader.ReadStop?)null);
             },
             cancellationToken).ConfigureAwait(false);
 
@@ -47,6 +55,8 @@ public sealed class StructuredFileParser : IDiagnosticParser
             Root = root,
             RawSource = raw,
             NodeCount = count,
+            ReadProblem = stop?.Message,
+            ReadProblemLine = stop?.Line ?? 0,
         };
     }
 

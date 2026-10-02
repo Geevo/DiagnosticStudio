@@ -33,6 +33,10 @@ public sealed record DiagnosticLocation
     /// </summary>
     public string? Member { get; init; }
 
+    /// <summary>The timeline belongs to the whole investigation, not to one artifact, so it has no artifact id.</summary>
+    public static DiagnosticLocation ForTimeline(long position = 0) =>
+        new() { ArtifactId = Guid.Empty, Kind = DiagnosticLocationKind.Timeline, NumericPosition = position };
+
     public static DiagnosticLocation ForArtifact(Guid artifactId) =>
         new() { ArtifactId = artifactId, Kind = DiagnosticLocationKind.Artifact };
 

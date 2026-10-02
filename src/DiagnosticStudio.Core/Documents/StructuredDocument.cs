@@ -283,6 +283,15 @@ public sealed record StructuredDocument : DiagnosticDocument
 
     public int NodeCount { get; init; }
 
+    /// <summary>
+    /// Set when the text stops being well-formed (a file cut off while it was written, a stray character): the tree holds
+    /// what came before that point, and the raw source has everything. <c>null</c> for a file that was read to the end.
+    /// </summary>
+    public string? ReadProblem { get; init; }
+
+    /// <summary>One-based line where reading stopped, or 0 when unknown.</summary>
+    public int ReadProblemLine { get; init; }
+
     public string PathOf(StructuredNode node) => StructuredPaths.PathOf(Format, node);
 
     public StructuredNode? FindNode(string path) => StructuredPaths.Resolve(Format, Root, path);

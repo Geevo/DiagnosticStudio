@@ -21,16 +21,18 @@ public sealed class TimelineService : ITimelineService
 
     private readonly IDocumentLoader _loader;
     private readonly int _maxEntries;
+    private readonly IBackgroundWorkGate _gate;
 
-    public TimelineService(IDocumentLoader loader)
-        : this(loader, TimelineIndex.MaxEntries)
+    public TimelineService(IDocumentLoader loader, IBackgroundWorkGate? gate = null)
+        : this(loader, TimelineIndex.MaxEntries, gate)
     {
     }
 
-    internal TimelineService(IDocumentLoader loader, int maxEntries)
+    internal TimelineService(IDocumentLoader loader, int maxEntries, IBackgroundWorkGate? gate = null)
     {
         _loader = loader;
         _maxEntries = maxEntries;
+        _gate = gate ?? UnlimitedWorkGate.Instance;
     }
 
     public async Task<TimelineIndex> BuildAsync(
@@ -39,7 +41,7 @@ public sealed class TimelineService : ITimelineService
         CancellationToken cancellationToken)
     {
         var candidates = artifacts
-            .Where(a => !a.IsContainer && a.ArtifactType is ArtifactType.EventLog or ArtifactType.TextLog)
+            .Where(a => !a.IsContainer && a.ArtifactType is ArtifactType.EventLog or ArtifactType.Trace or ArtifactType.TextLog)
             .OrderBy(a => a.ProvenanceDisplay, StringComparer.OrdinalIgnoreCase)
             .ThenBy(a => a.Id)
             .ToList();
@@ -55,7 +57,12 @@ public sealed class TimelineService : ITimelineService
             new ParallelOptions { MaxDegreeOfParallelism = MaxParallelism, CancellationToken = cancellationToken },
             async (i, token) =>
             {
-                var scan = await ScanAsync(candidates[i], issues, token).ConfigureAwait(false);
+                SourceScan? scan;
+                using (await _gate.EnterAsync(token).ConfigureAwait(false))
+                {
+                    scan = await ScanAsync(candidates[i], issues, token).ConfigureAwait(false);
+                }
+
                 results[i] = scan;
                 var total = Interlocked.Add(ref entriesSoFar, scan?.Entries.Count ?? 0);
                 progress?.Report(new TimelineProgress(Interlocked.Increment(ref done), candidates.Count, total));
@@ -147,6 +154,9 @@ public sealed class TimelineService : ITimelineService
                     return ScanEvents(events.Source, token);
                 case TextDocument text:
                     return ScanText(text.Lines, token);
+                case TableDocument { Format: TableFormat.CmTrace } table:
+                    // A CMTrace log is a log of timestamped lines; its time and level are read from them as for any log.
+                    return ScanText(table.RawSource, token);
                 default:
                     return null;
             }
@@ -241,8 +251,8 @@ public sealed class TimelineService : ITimelineService
     {
         switch (document)
         {
-            case TextDocument text:
-                var lines = text.Lines.ReadLines((int)Math.Max(0, entry.Position - 1), 1);
+            case TextDocument or TableDocument:
+                var lines = DocumentText.LinesOf(document)!.ReadLines((int)Math.Max(0, entry.Position - 1), 1);
                 return lines.Count == 0 ? string.Empty : Truncate(lines[0].Trim());
 
             case EventLogDocument events:

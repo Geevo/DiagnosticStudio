@@ -18,6 +18,12 @@ public interface IDocumentCache
 
     /// <summary>Drops everything, e.g. when the investigation changes. In-flight loads are cancelled.</summary>
     void Clear();
+
+    /// <summary>
+    /// Forgets one file's parsed copy so the next load reads it from disk again, even if it looks unchanged. A load
+    /// already running finishes for the callers waiting on it.
+    /// </summary>
+    void Invalidate(Guid artifactId);
 }
 
 /// <summary>Rough memory cost of the documents the parsers produce; deliberately simple and conservative.</summary>
@@ -28,8 +34,11 @@ public static class DocumentSizeEstimator
     public static long Estimate(DiagnosticArtifact artifact, DiagnosticDocument document) => document switch
     {
         RegistryDocument => Math.Max(artifact.Size, 1024) * 6,
+        EventLogDocument { Source: IMemorySizedSource sized } => sized.ApproximateMemoryBytes + (4L * 1024 * 1024),
         EventLogDocument events => (events.Source.Count * 48L) + (4L * 1024 * 1024),
         TextDocument text => (text.Lines.LineCount / 16L) + 65536,
+        HtmlDocument html => ((html.Markup?.Length ?? 0) * 2L) + (html.RawSource.LineCount / 16L) + 65536,
+        TableDocument table => (table.Table.RowCount * 24L) + (table.RawSource.LineCount / 16L) + 65536,
         StructuredDocument structured => (structured.NodeCount * 160L) + (structured.RawSource.LineCount / 16L) + 65536,
         _ => 4096,
     };
@@ -118,6 +127,17 @@ public sealed class CachingDocumentLoader : IDocumentLoader, IDocumentCache
             if (!entry.Task.IsCompleted)
             {
                 entry.Cts.Cancel();
+            }
+        }
+    }
+
+    public void Invalidate(Guid artifactId)
+    {
+        lock (_gate)
+        {
+            if (_entries.TryGetValue(artifactId, out var entry))
+            {
+                Remove(entry);
             }
         }
     }

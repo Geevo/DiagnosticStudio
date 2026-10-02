@@ -21,7 +21,7 @@ public sealed class UnsupportedArtifactParser : IDiagnosticParser
 
     private static string DescribeReason(DiagnosticArtifact artifact) => artifact.ArtifactType switch
     {
-        ArtifactType.Trace => "ETL decoding is not supported yet. The file is identified and its metadata is shown.",
+        ArtifactType.Trace => "This ETL trace could not be decoded. See the Output panel for the reason.",
         ArtifactType.Archive when !artifact.IsContainer =>
             "This archive was not opened. See the Output panel for the reason.",
         ArtifactType.Archive => "Archive contents are listed as separate artifacts in the explorer.",

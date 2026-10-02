@@ -44,6 +44,10 @@
             <EventSetter Event="KeyDown" Handler="ExplorerItem_KeyDown" />
             <EventSetter Event="MouseLeftButtonUp" Handler="ExplorerItem_Click" />
             <EventSetter Event="PreviewMouseRightButtonDown" Handler="ExplorerItem_RightClick" />
+            <EventSetter Event="RequestBringIntoView" Handler="ExplorerItem_RequestBringIntoView" />
+            <EventSetter Event="PreviewKeyDown" Handler="ExplorerItem_PreviewKeyDown" />
+            <EventSetter Event="PreviewMouseLeftButtonDown" Handler="ExplorerItem_PreviewMouseDown" />
+            <EventSetter Event="Expanded" Handler="ExplorerItem_Expanded" />
             <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}" />
             <Setter Property="ContextMenu">
                 <Setter.Value>

@@ -95,6 +95,101 @@ public partial class MainWindow : Window
         }
     }
 
+    // Moving through the tree with the keys brings the selected item into view, and a long name makes the tree
+    // scroll sideways to show all of it. Only the vertical part is wanted, so the request is repeated with a
+    // sliver of the item's left edge, which keeps it in line without moving the view across. (The tree item
+    // aims the request at its own header, so that is the target to look for.) Expanding a node is the exception:
+    // then its first child is brought fully into view, sideways as well.
+    private bool _bringingIntoView;
+    private bool _allowSideways;
+    private bool _expandedByUser;
+
+    private void ExplorerItem_RequestBringIntoView(object sender, RequestBringIntoViewEventArgs e)
+    {
+        if (_bringingIntoView
+            || _allowSideways
+            || sender is not TreeViewItem item
+            || e.TargetObject is not FrameworkElement target
+            || !ReferenceEquals(FindTreeViewItem(target), item))
+        {
+            return;
+        }
+
+        e.Handled = true;
+        _bringingIntoView = true;
+        try
+        {
+            var rect = e.TargetRect.IsEmpty ? new Rect(target.RenderSize) : e.TargetRect;
+            target.BringIntoView(new Rect(rect.X, rect.Y, Math.Min(rect.Width, 1), rect.Height));
+        }
+        finally
+        {
+            _bringingIntoView = false;
+        }
+    }
+
+    // Only an expansion the user asked for (the arrow keys, + and *, or a click on the arrow) moves the view.
+    // The Expand all button and the filter expand things too, and those must leave it alone.
+    private void ExplorerItem_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key is Key.Right or Key.Add or Key.Multiply)
+        {
+            MarkExpandedByUser();
+        }
+    }
+
+    private void ExplorerItem_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is DependencyObject source && FindAncestor<System.Windows.Controls.Primitives.ToggleButton>(source) is not null)
+        {
+            MarkExpandedByUser();
+        }
+    }
+
+    private void MarkExpandedByUser()
+    {
+        _expandedByUser = true;
+        Dispatcher.BeginInvoke(() => _expandedByUser = false, System.Windows.Threading.DispatcherPriority.Input);
+    }
+
+    private void ExplorerItem_Expanded(object sender, RoutedEventArgs e)
+    {
+        if (!_expandedByUser || sender is not TreeViewItem item || !ReferenceEquals(e.OriginalSource, item) || item.Items.Count == 0)
+        {
+            return;
+        }
+
+        // Once the children have been laid out.
+        Dispatcher.BeginInvoke(
+            () =>
+            {
+                if (item.ItemContainerGenerator.ContainerFromIndex(0) is TreeViewItem first)
+                {
+                    _allowSideways = true;
+                    try
+                    {
+                        first.BringIntoView();
+                    }
+                    finally
+                    {
+                        _allowSideways = false;
+                    }
+                }
+            },
+            System.Windows.Threading.DispatcherPriority.Loaded);
+    }
+
+    private static T? FindAncestor<T>(DependencyObject? source)
+        where T : DependencyObject
+    {
+        while (source is not null and not T)
+        {
+            source = System.Windows.Media.VisualTreeHelper.GetParent(source);
+        }
+
+        return source as T;
+    }
+
     private static TreeViewItem? FindTreeViewItem(DependencyObject? source)
     {
         while (source is not null and not TreeViewItem)

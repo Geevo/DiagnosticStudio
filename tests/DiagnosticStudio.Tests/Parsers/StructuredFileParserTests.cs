@@ -56,13 +56,27 @@ public sealed class StructuredFileParserTests : IDisposable
     [Fact]
     public async Task Invalid_content_falls_back_to_the_raw_text_and_says_why()
     {
-        var broken = Write("bad.xml", "<a><b></a>", ArtifactType.Xml);
+        var broken = Write("bad.xml", "plain words, no markup at all", ArtifactType.Xml);
 
         var result = await Loader().LoadAsync(broken, CancellationToken.None);
 
         Assert.IsType<TextDocument>(result.Document);
         Assert.Contains("StructuredFileParser failed", result.FailureMessage);
-        Assert.Contains("Not well-formed XML", result.FailureMessage);
+        Assert.Contains("no XML elements", result.FailureMessage);
+    }
+
+    [Fact]
+    public async Task Xml_cut_off_after_some_elements_opens_as_a_partial_tree_with_the_reason()
+    {
+        var cut = Write("diagerr.xml", "<?xml version=\"1.0\"?>\n<xml>\n<schema><row n=\"1\"/></schema>\n<data>\n", ArtifactType.Xml);
+
+        var result = await Loader().LoadAsync(cut, CancellationToken.None);
+
+        var doc = Assert.IsType<StructuredDocument>(result.Document);
+        Assert.Null(result.FailureMessage);
+        Assert.Contains("Unexpected end of file", doc.ReadProblem);
+        Assert.True(doc.ReadProblemLine >= 4);
+        Assert.NotNull(doc.FindNode("/xml/schema"));
     }
 
     [Fact]

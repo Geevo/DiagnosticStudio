@@ -78,7 +78,7 @@ public class DocumentLoaderTests
     }
 
     [Fact]
-    public async Task Fallback_parser_explains_why_etl_is_unsupported()
+    public async Task Fallback_parser_mentions_the_trace_when_etl_cannot_be_decoded()
     {
         var etl = Artifact with { ArtifactType = ArtifactType.Trace };
 

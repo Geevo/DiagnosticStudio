@@ -313,4 +313,66 @@ public sealed class DocumentHostTests : IDisposable
 
         Assert.Single(host.Documents);
     }
+
+    [Fact]
+    public async Task An_empty_text_file_is_flagged_so_a_blank_viewer_is_not_mistaken_for_a_fault()
+    {
+        var empty = AddLog("empty.log", 0);
+        var full = AddLog("full.log", 3);
+        var (host, _, _) = await CreateHost();
+
+        host.OpenArtifact(empty);
+        host.OpenArtifact(full);
+
+        Assert.True((await Loaded(host, empty)).IsEmpty);
+        Assert.False((await Loaded(host, full)).IsEmpty);
+    }
+
+    [Fact]
+    public async Task An_empty_file_of_any_type_is_flagged()
+    {
+        var reg = AddReg("empty.reg", string.Empty);
+        var (host, _, _) = await CreateHost();
+
+        host.OpenArtifact(reg);
+
+        Assert.True((await Loaded(host, reg)).IsEmpty);
+    }
+
+    [Fact]
+    public async Task Close_all_closes_every_tab_except_the_overview()
+    {
+        var a = AddLog("a.log", 5);
+        var b = AddLog("b.log", 5);
+        var c = AddLog("c.log", 5);
+        var (host, _, _) = await CreateHost();
+        host.OpenArtifact(a);
+        host.OpenArtifact(b);
+        host.OpenArtifact(c);
+        Assert.Equal(4, host.Documents.Count);
+
+        host.CloseAllCommand.Execute(null);
+
+        Assert.IsType<OverviewDocumentViewModel>(Assert.Single(host.Documents));
+        Assert.Same(host.Documents[0], host.ActiveDocument);
+    }
+
+    [Fact]
+    public async Task Close_others_keeps_the_chosen_tab_and_the_overview()
+    {
+        var a = AddLog("a.log", 5);
+        var b = AddLog("b.log", 5);
+        var c = AddLog("c.log", 5);
+        var (host, _, _) = await CreateHost();
+        host.OpenArtifact(a);
+        host.OpenArtifact(b);
+        host.OpenArtifact(c);
+        var keep = host.Documents.OfType<ArtifactDocumentViewModel>().Single(d => d.Artifact.Id == b.Id);
+
+        host.CloseOthersCommand.Execute(keep);
+
+        Assert.Equal(2, host.Documents.Count);
+        Assert.Contains(keep, host.Documents);
+        Assert.Same(keep, host.ActiveDocument);
+    }
 }

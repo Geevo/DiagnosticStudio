@@ -349,20 +349,19 @@ public sealed class GlobalSearchServiceTests : IDisposable
     // ---- robustness ----
 
     [Fact]
-    public async Task Binary_archive_and_trace_artifacts_are_never_opened()
+    public async Task Binary_and_archive_artifacts_are_never_opened()
     {
         var loader = new FakeLoader();
         var artifacts = new[]
         {
             Artifact("tool.bin", ArtifactType.Binary),
             Artifact("logs.cab", ArtifactType.Archive),
-            Artifact("trace.etl", ArtifactType.Trace),
         };
 
         var updates = await Run(loader, artifacts, "anything");
 
         Assert.Empty(loader.Loaded);
-        Assert.Equal(3, updates.Count);
+        Assert.Equal(2, updates.Count);
         Assert.Empty(Results(updates));
     }
 

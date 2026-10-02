@@ -79,6 +79,37 @@ public sealed class EventLogViewerTests : IDisposable
     }
 
     [Fact]
+    public void A_dirty_log_offers_a_refresh_until_it_has_been_read_again()
+    {
+        var (vm, _) = Open(dirty: true);
+
+        Assert.True(vm.RefreshOffered);
+        Assert.DoesNotContain("Read again", vm.WarningText);
+    }
+
+    [Fact]
+    public void A_dirty_log_read_again_says_that_reading_cannot_clear_it_and_stops_offering_refresh()
+    {
+        var (first, _) = Open(dirty: true);
+        var again = new EventLogViewerViewModel(first.Document, reloaded: true);
+
+        Assert.False(again.RefreshOffered);
+        Assert.Contains("Read again from disk", again.WarningText);
+        Assert.Contains("still marked", again.WarningText);
+        Assert.Contains("Collect the log again", again.WarningText);
+    }
+
+    [Fact]
+    public void A_clean_log_read_again_has_no_banner()
+    {
+        var (first, _) = Open();
+        var again = new EventLogViewerViewModel(first.Document, reloaded: true);
+
+        Assert.Null(again.WarningText);
+        Assert.True(again.RefreshOffered);
+    }
+
+    [Fact]
     public void Rows_expose_index_facts_and_UTC_time()
     {
         var (vm, _) = Open();

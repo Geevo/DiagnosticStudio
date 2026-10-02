@@ -24,6 +24,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- A 32 KB trace of four events from a .NET runtime, written by logman on a development machine. -->
+    <None Include="Parsers\Fixtures\small-trace.etl" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\DiagnosticStudio.Core\DiagnosticStudio.Core.csproj" />
     <ProjectReference Include="..\..\src\DiagnosticStudio.Ingestion\DiagnosticStudio.Ingestion.csproj" />
     <ProjectReference Include="..\..\src\DiagnosticStudio.Parsers\DiagnosticStudio.Parsers.csproj" />

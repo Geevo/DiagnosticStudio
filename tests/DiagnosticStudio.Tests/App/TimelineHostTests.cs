@@ -150,6 +150,71 @@ public sealed class TimelineHostTests : IDisposable
     }
 
     [Fact]
+    public async Task Back_after_opening_a_row_returns_to_the_timeline_not_to_an_earlier_file()
+    {
+        var (host, workspace, _) = Create();
+        await Open(workspace);
+        host.OpenArtifact(_evtx);               // an earlier file the user looked at
+        var timeline = host.ShowTimeline()!;
+        await timeline.PendingBuild;
+        timeline.SelectedRow = timeline.Rows.Single(r => r.SourceName == "agent.log" && r.Entry.Position == 2);
+
+        timeline.OpenSelectedCommand.Execute(null);
+        Assert.IsType<ArtifactDocumentViewModel>(host.ActiveDocument);
+
+        host.GoBackCommand.Execute(null);
+
+        Assert.Same(timeline, host.ActiveDocument);
+        Assert.Equal(2, timeline.SelectedRow!.Entry.Position); // the row is still selected
+    }
+
+    [Fact]
+    public async Task Back_and_forward_walk_between_the_timeline_and_the_files_opened_from_it()
+    {
+        var (host, workspace, _) = Create();
+        await Open(workspace);
+        var timeline = host.ShowTimeline()!;
+        await timeline.PendingBuild;
+        timeline.SelectedRow = timeline.Rows.First(r => r.SourceName == "agent.log");
+        timeline.OpenSelectedCommand.Execute(null);
+        var file = host.ActiveDocument;
+
+        host.GoBackCommand.Execute(null);
+        Assert.Same(timeline, host.ActiveDocument);
+
+        host.GoForwardCommand.Execute(null);
+        Assert.Same(file, host.ActiveDocument);
+        Assert.False(host.GoForwardCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Going_back_to_a_timeline_whose_tab_was_closed_reopens_it_without_rebuilding()
+    {
+        var (host, workspace, _) = Create();
+        await Open(workspace);
+        var timeline = host.ShowTimeline()!;
+        await timeline.PendingBuild;
+        timeline.SelectedRow = timeline.Rows.First(r => r.SourceName == "agent.log");
+        timeline.OpenSelectedCommand.Execute(null);
+        host.CloseCommand.Execute(timeline);
+
+        host.GoBackCommand.Execute(null);
+
+        Assert.Same(timeline, host.ActiveDocument);
+        Assert.Contains(timeline, host.Documents);
+    }
+
+    [Fact]
+    public void The_timeline_location_round_trips_through_its_text_form()
+    {
+        var location = DiagnosticLocation.ForTimeline(5);
+
+        Assert.True(DiagnosticLocation.TryParse(location.ToString(), out var parsed));
+        Assert.Equal(location, parsed);
+        Assert.Equal(DiagnosticLocationKind.Timeline, parsed!.Kind);
+    }
+
+    [Fact]
     public async Task Opening_a_row_from_the_timeline_opens_the_artifact_at_that_place()
     {
         var (host, workspace, _) = Create();

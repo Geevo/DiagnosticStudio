@@ -24,7 +24,7 @@ internal static class RuleFixtures
         public ListLines(IEnumerable<string> lines) => _lines = lines.ToArray();
 
         public int LineCount => _lines.Length;
-        public long ByteLength => 0;
+        public long ByteLength => _lines.Sum(l => l.Length + 1L);
         public string EncodingName => "test";
         public IReadOnlyList<string> ReadLines(int startLine, int count) => _lines.Skip(startLine).Take(count).ToArray();
         public IEnumerable<string> EnumerateLines(int startLine = 0) => _lines.Skip(startLine);

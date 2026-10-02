@@ -131,6 +131,11 @@ public sealed class UiSmokeTests
         File.WriteAllText(Path.Combine(dir, "policy.reg"), "Windows Registry Editor Version 5.00\r\n\r\n[HKEY_LOCAL_MACHINE\\SOFTWARE\\Contoso]\r\n\"Mode\"=\"boom\"\r\n");
         File.WriteAllText(Path.Combine(dir, "config.xml"), "<?xml version=\"1.0\"?>\r\n<Config><Item id=\"1\">boom</Item></Config>\r\n");
         File.WriteAllText(Path.Combine(dir, "data.json"), "{\"items\":[{\"name\":\"boom\"}]}\r\n");
+        File.WriteAllText(
+            Path.Combine(dir, "intune.log"),
+            "<![LOG[started]LOG]!><time=\"14:12:00.000+000\" date=\"7-23-2026\" component=\"Agent\" context=\"\" type=\"1\" thread=\"7\" file=\"\">\r\n"
+            + "<![LOG[boom failed]LOG]!><time=\"14:12:05.000+000\" date=\"7-23-2026\" component=\"Agent\" context=\"\" type=\"3\" thread=\"7\" file=\"\">\r\n");
+        File.WriteAllText(Path.Combine(dir, "report.csv"), "Name,Count\r\nalpha,1\r\nboom,2\r\n");
         var events = Enumerable.Range(0, 5)
             .Select(i => new TestEvent(500 + i, "Provider", (uint)(100 + i), EventLevels.Error, new DateTime(2026, 7, 23, 14, 13, 0, DateTimeKind.Utc).AddSeconds(i * 20), "PC", "a" + i, "b"))
             .ToList();
@@ -178,7 +183,7 @@ public sealed class UiSmokeTests
                 var main = services.GetRequiredService<MainWindowViewModel>();
                 await main.Workspace.OpenAsync(dir);
                 await Settle();
-                Assert.Equal(5, main.Workspace.Current!.Artifacts.Count);
+                Assert.Equal(7, main.Workspace.Current!.Artifacts.Count);
 
                 // One of each kind of viewer.
                 var expected = new Dictionary<string, Type>
@@ -188,6 +193,8 @@ public sealed class UiSmokeTests
                     ["config.xml"] = typeof(StructuredViewerView),
                     ["data.json"] = typeof(StructuredViewerView),
                     ["System.evtx"] = typeof(EventLogViewerView),
+                    ["intune.log"] = typeof(TableViewerView),
+                    ["report.csv"] = typeof(TableViewerView),
                 };
                 foreach (var artifact in main.Workspace.Current.Artifacts)
                 {
@@ -204,8 +211,8 @@ public sealed class UiSmokeTests
                 await Settle();
                 var view = FindVisual<TimelineView>(window);
                 Assert.NotNull(view);
-                Assert.Equal(2, timeline.Sources.Count);
-                Assert.Equal(8, timeline.Rows.Count); // 3 timestamped log lines + 5 events
+                Assert.Equal(3, timeline.Sources.Count);
+                Assert.Equal(10, timeline.Rows.Count); // 3 timestamped log lines + 5 events + 2 CMTrace records
 
                 // A search puts hits in the results tree.
                 main.SearchResults.Query = "boom";

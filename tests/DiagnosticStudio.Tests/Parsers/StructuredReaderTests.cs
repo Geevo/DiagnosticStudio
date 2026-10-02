@@ -400,3 +400,43 @@ public class StructuredReaderTests
         Assert.Equal("/a[1]", document.PathOf(document.NodeAtLine(4)!));
     }
 }
+
+public class StructuredReaderTolerantTests
+{
+    private static (StructuredNode Root, int Count, XmlStructureReader.ReadStop? Stop) Tolerant(string xml) =>
+        XmlStructureReader.ReadTolerant(new MemoryStream(new UTF8Encoding(false).GetBytes(xml)), CancellationToken.None);
+
+    [Fact]
+    public void A_file_cut_off_part_way_gives_the_tree_so_far_and_says_where_it_stopped()
+    {
+        var (root, count, stop) = Tolerant("<xml>\n<schema>\n<a b=\"1\"/>\n</schema>\n<data>\n");
+
+        Assert.NotNull(stop);
+        Assert.Contains("Unexpected end of file", stop!.Message);
+        Assert.True(stop.Line >= 5);
+        Assert.True(count >= 4);
+        Assert.Contains(root.Children, c => c.Name == "xml");
+    }
+
+    [Fact]
+    public void A_well_formed_file_has_no_stop()
+    {
+        var (_, _, stop) = Tolerant("<a><b/></a>");
+
+        Assert.Null(stop);
+    }
+
+    [Fact]
+    public void Text_with_no_element_before_the_fault_still_fails()
+    {
+        Assert.ThrowsAny<Exception>(() => Tolerant("<"));
+        Assert.Throws<InvalidDataException>(() => Tolerant("just some words"));
+    }
+
+    [Fact]
+    public void The_strict_reader_still_rejects_a_cut_off_file()
+    {
+        Assert.Throws<InvalidDataException>(() =>
+            XmlStructureReader.Read(new MemoryStream(Encoding.UTF8.GetBytes("<a><b>")), CancellationToken.None));
+    }
+}

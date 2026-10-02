@@ -16,7 +16,10 @@
     <DockPanel>
         <Border DockPanel.Dock="Bottom" Background="{DynamicResource PanelBrush}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="8,2">
-            <TextBlock Text="{Binding InfoText}" Foreground="{DynamicResource MutedTextBrush}" />
+            <DockPanel>
+                <local:ZoomBox DockPanel.Dock="Left" Margin="0,0,10,0" />
+                <TextBlock Text="{Binding InfoText}" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+            </DockPanel>
         </Border>
 
         <TabControl TabStripPlacement="Bottom" BorderThickness="0"

@@ -263,10 +263,6 @@
 
             <!-- Document tabs -->
             <Grid Grid.Column="2">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
                 <TabControl ItemsSource="{Binding Documents.Documents}"
                             SelectedItem="{Binding Documents.ActiveDocument, Mode=TwoWay}"
                             BorderThickness="0,1,0,0">
@@ -344,14 +340,8 @@
                     </TabControl.ItemTemplate>
                 </TabControl>
 
-                <Border Grid.Row="1" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                        BorderThickness="0,1,0,0" Padding="6,2"
-                        Visibility="{Binding Documents.ActiveDocument.SupportsContentZoom, Converter={StaticResource BoolToVisibility}}">
-                    <views:ZoomBox DataContext="{Binding ContentZoom}" HorizontalAlignment="Left" />
-                </Border>
-
                 <!-- Staged ingestion progress -->
-                <Border Grid.RowSpan="2" Style="{StaticResource LoadingOverlay}" Background="{DynamicResource OverlayBrush}">
+                <Border Style="{StaticResource LoadingOverlay}" Background="{DynamicResource OverlayBrush}">
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="420">
                         <TextBlock Text="Preparing diagnostics..." FontSize="16" FontWeight="SemiBold" />
                         <ProgressBar IsIndeterminate="True" Height="4" Margin="0,12" />

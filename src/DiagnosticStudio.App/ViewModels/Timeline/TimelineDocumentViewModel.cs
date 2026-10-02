@@ -95,8 +95,6 @@ public sealed partial class TimelineSourceViewModel : ObservableObject
 /// </summary>
 public sealed partial class TimelineDocumentViewModel : DocumentViewModel
 {
-    public override bool SupportsContentZoom => false;
-
     private readonly IReadOnlyList<DiagnosticArtifact> _artifacts;
     private readonly ITimelineService _service;
     private readonly Action<DiagnosticLocation> _open;

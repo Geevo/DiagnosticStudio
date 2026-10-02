@@ -1,4 +1,6 @@
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using DiagnosticStudio.App.ViewModels;
 
@@ -6,7 +8,16 @@ namespace DiagnosticStudio.App.Views;
 
 public partial class ZoomBox : UserControl
 {
-    public ZoomBox() => InitializeComponent();
+    public ZoomBox()
+    {
+        InitializeComponent();
+
+        // Every box shows the one document zoom of the window it is in.
+        SetBinding(DataContextProperty, new Binding("DataContext.ContentZoom")
+        {
+            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(Window), 1),
+        });
+    }
 
     private ZoomViewModel? Zoom => DataContext as ZoomViewModel;
 

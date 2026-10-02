@@ -114,9 +114,10 @@
         <Border DockPanel.Dock="Bottom" Background="{DynamicResource PanelBrush}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="8,2">
             <DockPanel>
-                <TextBlock DockPanel.Dock="Right" Text="{Binding SelectionInfo}" Margin="12,0,0,0"
+                <local:ZoomBox DockPanel.Dock="Left" Margin="0,0,10,0" />
+                <TextBlock DockPanel.Dock="Right" Text="{Binding SelectionInfo}" Margin="12,0,0,0" VerticalAlignment="Center"
                            Foreground="{DynamicResource MutedTextBrush}" />
-                <TextBlock Text="{Binding InfoText}" Foreground="{DynamicResource MutedTextBrush}" />
+                <TextBlock Text="{Binding InfoText}" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
             </DockPanel>
         </Border>
 

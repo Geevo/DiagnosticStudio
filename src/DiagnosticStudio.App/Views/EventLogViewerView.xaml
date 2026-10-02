@@ -89,6 +89,11 @@
             </DockPanel>
         </Border>
 
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource PanelBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="8,2">
+            <local:ZoomBox HorizontalAlignment="Left" />
+        </Border>
+
         <local:ScaledContent>
             <Grid>
                 <Grid.RowDefinitions>

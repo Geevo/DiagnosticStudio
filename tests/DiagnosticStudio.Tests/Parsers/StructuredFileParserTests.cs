@@ -80,6 +80,20 @@ public sealed class StructuredFileParserTests : IDisposable
     }
 
     [Fact]
+    public async Task Json_cut_off_after_some_values_opens_as_a_partial_tree_with_the_reason()
+    {
+        var cut = Write("state.json", "{\n  \"device\": \"A1\",\n  \"checks\": [\n    { \"id\": 1 },\n    { \"id\": 2", ArtifactType.Json);
+
+        var result = await Loader().LoadAsync(cut, CancellationToken.None);
+
+        var doc = Assert.IsType<StructuredDocument>(result.Document);
+        Assert.Null(result.FailureMessage);
+        Assert.NotNull(doc.ReadProblem);
+        Assert.True(doc.ReadProblemLine >= 4);
+        Assert.NotNull(doc.FindNode("/device"));
+    }
+
+    [Fact]
     public async Task A_json_log_that_is_not_one_document_still_opens()
     {
         var lines = Write("log.json", "{\"level\":\"info\"}\n{\"level\":\"error\"}\n", ArtifactType.Json);

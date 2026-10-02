@@ -43,8 +43,7 @@ public sealed class StructuredFileParser : IDiagnosticParser
                     }
                 }
 
-                var (jsonRoot, jsonCount) = JsonStructureReader.Read(File.ReadAllBytes(path), cancellationToken);
-                return (jsonRoot, jsonCount, (XmlStructureReader.ReadStop?)null);
+                return JsonStructureReader.ReadTolerant(File.ReadAllBytes(path), cancellationToken);
             },
             cancellationToken).ConfigureAwait(false);
 

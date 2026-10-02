@@ -440,3 +440,55 @@ public class StructuredReaderTolerantTests
             XmlStructureReader.Read(new MemoryStream(Encoding.UTF8.GetBytes("<a><b>")), CancellationToken.None));
     }
 }
+
+public class JsonTolerantReaderTests
+{
+    private static (StructuredNode Root, int Count, XmlStructureReader.ReadStop? Stop) Tolerant(string json) =>
+        JsonStructureReader.ReadTolerant(new UTF8Encoding(false).GetBytes(json), CancellationToken.None);
+
+    [Fact]
+    public void A_document_cut_off_part_way_gives_the_tree_so_far_and_says_where_it_stopped()
+    {
+        var (root, count, stop) = Tolerant("{\n  \"name\": \"a\",\n  \"items\": [1, 2,\n    3, \"x");
+
+        Assert.NotNull(stop);
+        Assert.True(stop!.Line >= 3);
+        Assert.Equal(StructuredNodeKind.Object, root.Kind);
+        Assert.Contains(root.Children, c => c.Name == "name");
+        var items = Assert.Single(root.Children, c => c.Name == "items");
+        Assert.Equal(3, items.Children.Count);
+        Assert.True(count >= 5);
+    }
+
+    [Fact]
+    public void Garbage_after_a_complete_value_keeps_the_value()
+    {
+        var (root, _, stop) = Tolerant("{\"a\":1}\n<<< not json");
+
+        Assert.NotNull(stop);
+        Assert.Equal(2, stop!.Line);
+        Assert.Contains(root.Children, c => c.Name == "a");
+    }
+
+    [Fact]
+    public void A_valid_document_has_no_stop()
+    {
+        var (_, _, stop) = Tolerant("[1, 2, 3]");
+
+        Assert.Null(stop);
+    }
+
+    [Fact]
+    public void Content_with_no_value_before_the_fault_still_fails()
+    {
+        Assert.Throws<InvalidDataException>(() => Tolerant("not json at all"));
+        Assert.Throws<InvalidDataException>(() => Tolerant("   "));
+    }
+
+    [Fact]
+    public void The_strict_reader_still_rejects_a_cut_off_document()
+    {
+        Assert.Throws<InvalidDataException>(() =>
+            JsonStructureReader.Read(Encoding.UTF8.GetBytes("{\"a\": [1,"), CancellationToken.None));
+    }
+}

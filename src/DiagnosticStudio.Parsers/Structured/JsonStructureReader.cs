@@ -24,6 +24,25 @@ public static class JsonStructureReader
         int maxDepth = DefaultMaxDepth,
         int maxNodes = DefaultMaxNodes)
     {
+        var (root, count, _) = Build(content, cancellationToken, maxDepth, maxNodes, tolerant: false);
+        return (root, count);
+    }
+
+    /// <summary>
+    /// Like <see cref="Read"/>, but JSON that stops being valid after at least one value (a file cut off while being
+    /// written, or with garbage at the end) still gives the tree built up to that point, with the reason. Content with no
+    /// JSON value at all, or one that breaks a limit, still throws.
+    /// </summary>
+    public static (StructuredNode Root, int NodeCount, XmlStructureReader.ReadStop? Stop) ReadTolerant(
+        byte[] content,
+        CancellationToken cancellationToken = default,
+        int maxDepth = DefaultMaxDepth,
+        int maxNodes = DefaultMaxNodes) =>
+        Build(content, cancellationToken, maxDepth, maxNodes, tolerant: true);
+
+    private static (StructuredNode Root, int NodeCount, XmlStructureReader.ReadStop? Stop) Build(
+        byte[] content, CancellationToken cancellationToken, int maxDepth, int maxNodes, bool tolerant)
+    {
         var utf8 = ToUtf8(content);
         var lineStarts = FindLineStarts(utf8);
 
@@ -32,6 +51,7 @@ public static class JsonStructureReader
         containers.Push(document);
         string? pendingName = null;
         var count = 0;
+        XmlStructureReader.ReadStop? stop = null;
 
         var reader = new Utf8JsonReader(
             utf8,
@@ -45,8 +65,22 @@ public static class JsonStructureReader
 
         try
         {
-            while (reader.Read())
+            while (true)
             {
+                try
+                {
+                    if (!reader.Read())
+                    {
+                        break;
+                    }
+                }
+                catch (JsonException ex) when (tolerant && document.Children.Count > 0)
+                {
+                    var failedAt = ex.LineNumber is { } zeroBased ? (int)zeroBased + 1 : LineOf(lineStarts, reader.BytesConsumed);
+                    stop = new XmlStructureReader.ReadStop(ex.Message, failedAt);
+                    break;
+                }
+
                 if ((count & 0xFFF) == 0)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -115,7 +149,7 @@ public static class JsonStructureReader
             throw new InvalidDataException("The file contains no JSON value.");
         }
 
-        return document.Children.Count == 1 ? (document.PromoteOnlyChild(), count) : (document, count);
+        return document.Children.Count == 1 ? (document.PromoteOnlyChild(), count, stop) : (document, count, stop);
     }
 
     private static void Count(ref int count, int max)

@@ -24,6 +24,11 @@
 
             <TabItem Header="Structure">
                 <DockPanel>
+                    <Border DockPanel.Dock="Top" Style="{StaticResource NoticeBanner}"
+                            Visibility="{Binding ReadProblemText, Converter={x:Static local:NullToVisibilityConverter.Instance}}">
+                        <TextBlock Text="{Binding ReadProblemText}" TextWrapping="Wrap" />
+                    </Border>
+
                     <!-- Find -->
                     <Border DockPanel.Dock="Top" Background="{DynamicResource PanelBrush}"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="6,4">
@@ -105,7 +110,19 @@
             </TabItem>
 
             <TabItem Header="Raw source">
-                <ContentControl Content="{Binding Raw}" />
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Background="{DynamicResource PanelBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="6,3">
+                        <DockPanel>
+                            <ToggleButton DockPanel.Dock="Left" Content="Indent" Padding="10,2" Margin="0,0,10,0"
+                                          IsChecked="{Binding PrettyRaw}" IsEnabled="{Binding PrettyAvailable}"
+                                          ToolTip="Show the file re-indented. The text is unchanged; only line breaks and indentation are added." />
+                            <TextBlock Text="{Binding PrettyStatus}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                       Foreground="{DynamicResource MutedTextBrush}" />
+                        </DockPanel>
+                    </Border>
+                    <ContentControl Content="{Binding ActiveRaw}" />
+                </DockPanel>
             </TabItem>
         </TabControl>
     </DockPanel>

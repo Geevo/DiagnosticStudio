@@ -25,6 +25,7 @@ public partial class TextViewerView : UserControl
         if (_viewModel is not null)
         {
             _viewModel.ScrollToLineRequested -= OnScrollToLineRequested;
+            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
         }
 
         _viewModel = e.NewValue as TextViewerViewModel;
@@ -34,6 +35,7 @@ public partial class TextViewerView : UserControl
         }
 
         _viewModel.ScrollToLineRequested += OnScrollToLineRequested;
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
 
         // The tab's content is recreated when switching tabs; put the selection back.
         if (_viewModel.CurrentLine > 0)
@@ -95,10 +97,24 @@ public partial class TextViewerView : UserControl
         }
     }
 
+    // Switching to text selection puts away the lines that were selected.
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(TextViewerViewModel.FreeSelection) && _viewModel is { FreeSelection: true })
+        {
+            LineList.UnselectAll();
+        }
+    }
+
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
         var ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
         var shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+
+        if (_viewModel is { FreeSelection: true } free && LineList.IsKeyboardFocusWithin && HandleFreeSelectionKey(free, e, ctrl))
+        {
+            return;
+        }
 
         switch (e.Key)
         {
@@ -155,7 +171,9 @@ public partial class TextViewerView : UserControl
     private void OnCanCopy(object sender, CanExecuteRoutedEventArgs e)
     {
         // Can be queried while the XAML is still being loaded, before LineList is assigned.
-        e.CanExecute = LineList is not null && LineList.SelectedItems.Count > 0;
+        e.CanExecute = _viewModel is { FreeSelection: true }
+            ? _viewModel.HasTextSelection
+            : LineList is not null && LineList.SelectedItems.Count > 0;
         e.Handled = true;
     }
 
@@ -168,7 +186,9 @@ public partial class TextViewerView : UserControl
 
         try
         {
-            Clipboard.SetText(_viewModel.BuildCopyText(LineList.SelectedItems.OfType<LineViewModel>()));
+            Clipboard.SetText(_viewModel.FreeSelection
+                ? _viewModel.SelectedText(out _)
+                : _viewModel.BuildCopyText(LineList.SelectedItems.OfType<LineViewModel>()));
         }
         catch (System.Runtime.InteropServices.COMException)
         {

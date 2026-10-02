@@ -6,6 +6,8 @@
                     xmlns:ev="clr-namespace:DiagnosticStudio.App.ViewModels.EventLogViewer"
                     xmlns:sv="clr-namespace:DiagnosticStudio.App.ViewModels.StructuredViewer"
                     xmlns:tl="clr-namespace:DiagnosticStudio.App.ViewModels.Timeline"
+                    xmlns:tb="clr-namespace:DiagnosticStudio.App.ViewModels.TableViewer"
+                    xmlns:hv="clr-namespace:DiagnosticStudio.App.ViewModels.HtmlViewer"
                     xmlns:views="clr-namespace:DiagnosticStudio.App.Views">
 
     <!-- Key/value rows with a shared label column, used by the Overview and artifact documents. -->
@@ -128,6 +130,14 @@
         <views:TimelineView />
     </DataTemplate>
 
+    <DataTemplate DataType="{x:Type hv:HtmlViewerViewModel}">
+        <views:HtmlViewerView />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type tb:TableViewerViewModel}">
+        <views:TableViewerView />
+    </DataTemplate>
+
     <DataTemplate DataType="{x:Type sv:StructuredViewerViewModel}">
         <views:StructuredViewerView />
     </DataTemplate>
@@ -140,12 +150,62 @@
         <DockPanel>
             <Border DockPanel.Dock="Top" Background="{DynamicResource PanelHeaderBrush}" Padding="8,3"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-                <TextBlock Text="{Binding Artifact.ProvenanceDisplay}" TextTrimming="CharacterEllipsis"
-                           Foreground="{DynamicResource MutedTextBrush}" ToolTip="{Binding Artifact.ProvenanceDisplay}" />
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Margin="8,0,0,0" Padding="6,0" MinHeight="0" BorderThickness="0" Background="Transparent"
+                            FontFamily="{StaticResource IconFont}" FontSize="12" Content="&#xE72C;"
+                            ToolTip="Refresh: read this file from disk again (F5)"
+                            Command="{Binding DataContext.Documents.RefreshCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            CommandParameter="{Binding}" />
+                    <TextBlock Text="{Binding Artifact.ProvenanceDisplay}" TextTrimming="CharacterEllipsis"
+                               Foreground="{DynamicResource MutedTextBrush}" ToolTip="{Binding Artifact.ProvenanceDisplay}" />
+                </DockPanel>
+            </Border>
+
+            <Border DockPanel.Dock="Top" Style="{StaticResource NoticeBanner}">
+                <Border.Visibility>
+                    <Binding Path="IsEmpty">
+                        <Binding.Converter>
+                            <BooleanToVisibilityConverter />
+                        </Binding.Converter>
+                    </Binding>
+                </Border.Visibility>
+                <TextBlock TextWrapping="Wrap">
+                    <Run FontWeight="SemiBold" Text="This file is empty." />
+                    <Run Text="It has no content (0 bytes), so there is nothing to show. It was empty when it was collected, or it was cut short." />
+                </TextBlock>
             </Border>
 
             <Grid>
-                <ContentControl Content="{Binding Viewer}" />
+                <ContentControl Content="{Binding Viewer}">
+                    <ContentControl.Style>
+                        <Style TargetType="ContentControl">
+                            <Setter Property="Visibility" Value="Visible" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ContentControl.Style>
+                </ContentControl>
+
+                <TextBlock Text="Empty file" FontSize="26" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="{DynamicResource MutedTextBrush}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding IsEmpty}" Value="True" />
+                                        <Condition Binding="{Binding Viewer, Converter={x:Static views:NullToBooleanConverter.Instance}}" Value="True" />
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
 
                 <!-- Metadata view: shown while loading and for artifacts without a viewer. -->
                 <ScrollViewer VerticalScrollBarVisibility="Auto">

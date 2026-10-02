@@ -1,0 +1,40 @@
+<UserControl x:Class="DiagnosticStudio.App.Views.HtmlViewerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:DiagnosticStudio.App.Views"
+             DataContextChanged="OnDataContextChanged">
+
+    <DockPanel>
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource PanelBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="8,2">
+            <TextBlock Text="{Binding InfoText}" Foreground="{DynamicResource MutedTextBrush}" />
+        </Border>
+
+        <TabControl TabStripPlacement="Bottom" BorderThickness="0" SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
+
+            <TabItem Header="Page">
+                <DockPanel>
+                    <!-- Why the page is not drawn -->
+                    <Border DockPanel.Dock="Top" Style="{StaticResource NoticeBanner}"
+                            Visibility="{Binding RenderError, Converter={x:Static local:NullToVisibilityConverter.Instance}}">
+                        <TextBlock Text="{Binding RenderError}" TextWrapping="Wrap" />
+                    </Border>
+
+                    <!-- What keeps the page harmless -->
+                    <Border DockPanel.Dock="Top" Background="{DynamicResource PanelBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,3">
+                        <TextBlock Text="Shown with scripts, links, forms and network access blocked. Nothing in the file runs or is fetched."
+                                   Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" />
+                    </Border>
+
+                    <!-- The browser component is created here when the tab is shown -->
+                    <Grid x:Name="WebHost" Loaded="OnWebHostLoaded" Unloaded="OnWebHostUnloaded" />
+                </DockPanel>
+            </TabItem>
+
+            <TabItem Header="Source">
+                <ContentControl Content="{Binding Raw}" />
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</UserControl>

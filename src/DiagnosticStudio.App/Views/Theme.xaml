@@ -50,6 +50,14 @@
         </Style.Triggers>
     </Style>
 
+    <!-- A strip across the top of a document that says something about the whole file. -->
+    <Style x:Key="NoticeBanner" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource BannerBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BannerBorderBrush}" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="Padding" Value="8,4" />
+    </Style>
+
     <Style x:Key="SectionHeader" TargetType="TextBlock">
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="FontSize" Value="11" />

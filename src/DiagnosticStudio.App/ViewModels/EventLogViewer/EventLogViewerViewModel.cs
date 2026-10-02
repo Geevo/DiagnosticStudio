@@ -38,7 +38,11 @@ public sealed partial class EventLogViewerViewModel : ObservableObject, ILocatio
     private CancellationTokenSource? _filterCts;
     private bool _suppressFilter;
 
-    public EventLogViewerViewModel(EventLogDocument document)
+    /// <param name="reloaded">
+    /// The file was just read again. "Not cleanly closed" is stored in the file itself, so reading the same file again
+    /// cannot clear it; the banner then says so and stops offering a refresh that changes nothing.
+    /// </param>
+    public EventLogViewerViewModel(EventLogDocument document, bool reloaded = false)
     {
         Document = document;
         Source = document.Source;
@@ -50,7 +54,8 @@ public sealed partial class EventLogViewerViewModel : ObservableObject, ILocatio
             .Concat(Source.Providers.Select(p => new ProviderOption(p.Id, $"{p.Name} ({p.Count:N0})")))
             .ToList();
 
-        WarningText = BuildWarning(document);
+        WarningText = BuildWarning(document, reloaded);
+        RefreshOffered = !(reloaded && document.IsDirty);
         UpdateStatus(filtered: false, filteredCount: Source.Count);
     }
 
@@ -60,6 +65,9 @@ public sealed partial class EventLogViewerViewModel : ObservableObject, ILocatio
 
     /// <summary>Banner text for unclean logs and parse problems; <c>null</c> for a clean file.</summary>
     public string? WarningText { get; }
+
+    /// <summary>Whether the banner offers to read the file again.</summary>
+    public bool RefreshOffered { get; }
 
     /// <summary>Raised when the view should scroll a row (index into <see cref="Events"/>) into view.</summary>
     public event EventHandler<int>? ScrollToRowRequested;
@@ -290,12 +298,15 @@ public sealed partial class EventLogViewerViewModel : ObservableObject, ILocatio
 
     // ---- banner ----
 
-    private static string? BuildWarning(EventLogDocument document)
+    private static string? BuildWarning(EventLogDocument document, bool reloaded)
     {
         var parts = new List<string>();
         if (document.IsDirty)
         {
-            parts.Add("This log was not cleanly closed (it may have been copied while in use), so recent events could be missing.");
+            parts.Add(reloaded
+                ? "Read again from disk, and the file itself is still marked \"not cleanly closed\" (the mark is stored in the file, so reading it again cannot clear it). "
+                    + "It may have been copied while in use, so recent events could be missing. Collect the log again to get a closed copy."
+                : "This log was not cleanly closed (it may have been copied while in use), so recent events could be missing.");
         }
 
         if (document.TotalIssueCount > 0)
@@ -304,6 +315,7 @@ public sealed partial class EventLogViewerViewModel : ObservableObject, ILocatio
             parts.Add($"{document.TotalIssueCount:N0} problems were found while reading the file; affected events may be missing or incomplete.{first}");
         }
 
+        parts.AddRange(document.Notes);
         return parts.Count == 0 ? null : string.Join(" ", parts);
     }
 }

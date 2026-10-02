@@ -23,6 +23,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ProblemsViewModel problems,
         SearchResultsViewModel searchResults,
         OutputViewModel output,
+        StatusBarViewModel statusBar,
+        ZoomViewModel zoom,
         IFileDialogService dialogs)
     {
         Workspace = workspace;
@@ -31,6 +33,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Problems = problems;
         SearchResults = searchResults;
         Output = output;
+        StatusBar = statusBar;
+        Zoom = zoom;
         _dialogs = dialogs;
 
         // A new search brings the results panel forward.
@@ -51,6 +55,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public ProblemsViewModel Problems { get; }
     public SearchResultsViewModel SearchResults { get; }
     public OutputViewModel Output { get; }
+    public StatusBarViewModel StatusBar { get; }
+    public ZoomViewModel Zoom { get; }
 
     public string Title => Workspace.BundleName is { } name
         ? $"{name} — Diagnostic Studio"

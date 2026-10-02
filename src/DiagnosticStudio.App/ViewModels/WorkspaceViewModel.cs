@@ -66,7 +66,7 @@ public sealed partial class WorkspaceViewModel : ObservableObject
             var previous = Current;
             Current = workspace;
             WorkspaceChanged?.Invoke(this, EventArgs.Empty);
-            previous?.Dispose();
+            DisposeInBackground(previous);
 
             foreach (var issue in workspace.Issues)
             {
@@ -108,7 +108,37 @@ public sealed partial class WorkspaceViewModel : ObservableObject
 
         Current = null;
         WorkspaceChanged?.Invoke(this, EventArgs.Empty);
-        previous.Dispose();
+        DisposeInBackground(previous);
+    }
+
+    private Task _cleanup = Task.CompletedTask;
+
+    /// <summary>
+    /// Removal of the previous workspace's extracted files. Deleting thousands of files (and having a virus scanner
+    /// look at each) can take seconds, so it never runs on the interface thread. Removals run one after another.
+    /// </summary>
+    public Task PendingCleanup => _cleanup;
+
+    private void DisposeInBackground(InvestigationWorkspace? previous)
+    {
+        if (previous is null)
+        {
+            return;
+        }
+
+        var before = _cleanup;
+        _cleanup = Task.Run(async () =>
+        {
+            await before.ConfigureAwait(false);
+            try
+            {
+                previous.Dispose();
+            }
+            catch (Exception ex)
+            {
+                _output.Write(OutputSeverity.Warning, "Housekeeping", "Could not remove the previous working folder: " + ex.Message);
+            }
+        });
     }
 
     private static OutputSeverity ToOutputSeverity(IngestionIssueSeverity severity) => severity switch

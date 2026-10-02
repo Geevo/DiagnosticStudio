@@ -47,6 +47,66 @@ public sealed class HighlightedTextBlock : TextBlock
         set => SetValue(MatchCaseProperty, value);
     }
 
+    public static readonly DependencyProperty SelectionProperty = DependencyProperty.Register(
+        nameof(Selection), typeof(LogSelection), typeof(HighlightedTextBlock),
+        new PropertyMetadata(LogSelection.None, (d, e) => ((HighlightedTextBlock)d).OnSelectionChanged((LogSelection)e.OldValue, (LogSelection)e.NewValue)));
+
+    /// <summary>The text the engineer has marked in the viewer; the part that falls on this line is drawn marked.</summary>
+    public LogSelection Selection
+    {
+        get => (LogSelection)GetValue(SelectionProperty);
+        set => SetValue(SelectionProperty, value);
+    }
+
+    // Marking text changes the selection many times a second; only the lines it touches before or after need redrawing.
+    private void OnSelectionChanged(LogSelection before, LogSelection after)
+    {
+        if (Line is not { } line)
+        {
+            return;
+        }
+
+        var length = line.Text.Length;
+        if (before.SpanOnLine(line.LineNumber, length) is not null || after.SpanOnLine(line.LineNumber, length) is not null)
+        {
+            Rebuild();
+        }
+    }
+
+    /// <summary>The character of the line under <paramref name="point"/> (relative to this element): where a click lands between letters.</summary>
+    public int ColumnAt(Point point)
+    {
+        var length = Line?.Text.Length ?? 0;
+        if (GetPositionFromPoint(point, snapToText: true) is not { } pointer)
+        {
+            return length;
+        }
+
+        var column = 0;
+        foreach (var inline in Inlines)
+        {
+            if (inline is not Run run)
+            {
+                continue;
+            }
+
+            // Before the first character, or in the gap between two pieces: the next character is the one at 'column'.
+            if (pointer.CompareTo(run.ContentStart) < 0)
+            {
+                return Math.Clamp(column, 0, length);
+            }
+
+            if (pointer.CompareTo(run.ContentEnd) <= 0)
+            {
+                return Math.Clamp(column + run.ContentStart.GetOffsetToPosition(pointer), 0, length);
+            }
+
+            column += run.Text.Length;
+        }
+
+        return length;
+    }
+
     private void Rebuild()
     {
         Inlines.Clear();
@@ -56,7 +116,7 @@ public sealed class HighlightedTextBlock : TextBlock
         }
 
         var text = line.Text;
-        var spans = new List<(int Start, int Length, bool IsMatch)>();
+        var matches = new List<(int Start, int Length)>();
 
         var query = Highlight;
         if (!string.IsNullOrEmpty(query))
@@ -64,54 +124,76 @@ public sealed class HighlightedTextBlock : TextBlock
             var comparison = MatchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
             var from = 0;
             int at;
-            while (spans.Count < MaxHighlightsPerLine && (at = text.IndexOf(query, from, comparison)) >= 0)
+            while (matches.Count < MaxHighlightsPerLine && (at = text.IndexOf(query, from, comparison)) >= 0)
             {
-                spans.Add((at, query.Length, true));
+                matches.Add((at, query.Length));
                 from = at + query.Length;
             }
         }
 
+        (int Start, int Length)? timestamp = null;
         if (line.Info.HasTimestampSpan
             && line.Info.TimestampStart + line.Info.TimestampLength <= text.Length
-            && !spans.Any(s => s.Start < line.Info.TimestampStart + line.Info.TimestampLength
-                               && line.Info.TimestampStart < s.Start + s.Length))
+            && !matches.Any(s => s.Start < line.Info.TimestampStart + line.Info.TimestampLength
+                                 && line.Info.TimestampStart < s.Start + s.Length))
         {
-            spans.Add((line.Info.TimestampStart, line.Info.TimestampLength, false));
-            spans.Sort((a, b) => a.Start.CompareTo(b.Start));
+            timestamp = (line.Info.TimestampStart, line.Info.TimestampLength);
         }
 
-        if (spans.Count == 0)
+        var selection = Selection.SpanOnLine(line.LineNumber, text.Length);
+        if (matches.Count == 0 && timestamp is null && selection is null)
         {
             Inlines.Add(new Run(text));
             return;
         }
 
-        var position = 0;
-        foreach (var (start, length, isMatch) in spans)
+        // Cut the line wherever a highlight starts or ends, then style each piece by what covers it.
+        var cuts = new SortedSet<int> { 0, text.Length };
+        foreach (var (start, length) in matches)
         {
-            if (start > position)
-            {
-                Inlines.Add(new Run(text[position..start]));
-            }
+            cuts.Add(start);
+            cuts.Add(Math.Min(text.Length, start + length));
+        }
 
-            var run = new Run(text.Substring(start, length));
+        if (timestamp is { } ts)
+        {
+            cuts.Add(ts.Start);
+            cuts.Add(ts.Start + ts.Length);
+        }
+
+        if (selection is { } sel)
+        {
+            cuts.Add(sel.Start);
+            cuts.Add(sel.Start + sel.Length);
+        }
+
+        var points = cuts.ToArray();
+        for (var i = 0; i + 1 < points.Length; i++)
+        {
+            var from = points[i];
+            var to = points[i + 1];
+            var run = new Run(text[from..to]);
+
+            var isMatch = matches.Any(m => from >= m.Start && to <= m.Start + m.Length);
+            var isTimestamp = timestamp is { } t && from >= t.Start && to <= t.Start + t.Length;
+            var isSelected = selection is { } s && from >= s.Start && to <= s.Start + s.Length;
+
             if (isMatch)
             {
                 run.Background = MatchBackground;
                 run.Foreground = MatchForeground;
             }
-            else
+            else if (isTimestamp)
             {
                 run.SetResourceReference(TextElement.ForegroundProperty, "TimestampTextBrush");
             }
 
-            Inlines.Add(run);
-            position = start + length;
-        }
+            if (isSelected)
+            {
+                run.SetResourceReference(TextElement.BackgroundProperty, "TextSelectionBrush");
+            }
 
-        if (position < text.Length)
-        {
-            Inlines.Add(new Run(text[position..]));
+            Inlines.Add(run);
         }
     }
 

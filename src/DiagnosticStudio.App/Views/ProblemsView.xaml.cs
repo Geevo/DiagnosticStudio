@@ -41,6 +41,9 @@ public partial class ProblemsView : UserControl
             case FindingViewModel finding:
                 ViewModel?.OpenFindingCommand.Execute(finding);
                 return true;
+            case FileProblemViewModel fileProblem:
+                ViewModel?.OpenFileProblemCommand.Execute(fileProblem);
+                return true;
             default:
                 return false;
         }

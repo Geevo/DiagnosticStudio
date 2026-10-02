@@ -9,7 +9,8 @@
         d:DataContext="{d:DesignInstance Type=vm:MainWindowViewModel}"
         FontFamily="Segoe UI" FontSize="12" Background="{DynamicResource WindowBrush}"
         Title="{Binding Title}" Height="760" Width="1280" MinHeight="480" MinWidth="800"
-        AllowDrop="True" DragOver="Window_DragOver" Drop="Window_Drop">
+        AllowDrop="True" DragOver="Window_DragOver" Drop="Window_Drop"
+        PreviewMouseWheel="Window_PreviewMouseWheel">
 
     <Window.InputBindings>
         <KeyBinding Key="O" Modifiers="Ctrl" Command="{Binding OpenBundleCommand}" />
@@ -19,14 +20,61 @@
         <KeyBinding Key="Right" Modifiers="Alt" Command="{Binding Documents.GoForwardCommand}" />
         <KeyBinding Key="F" Modifiers="Ctrl+Shift" Command="{Binding FocusSearchCommand}" />
         <KeyBinding Key="T" Modifiers="Ctrl" Command="{Binding ShowInTimelineCommand}" />
+        <KeyBinding Key="F5" Command="{Binding Documents.RefreshCommand}" CommandParameter="{Binding Documents.ActiveDocument}" />
+        <KeyBinding Key="OemPlus" Modifiers="Ctrl" Command="{Binding Zoom.ZoomInCommand}" />
+        <KeyBinding Key="Add" Modifiers="Ctrl" Command="{Binding Zoom.ZoomInCommand}" />
+        <KeyBinding Key="OemMinus" Modifiers="Ctrl" Command="{Binding Zoom.ZoomOutCommand}" />
+        <KeyBinding Key="Subtract" Modifiers="Ctrl" Command="{Binding Zoom.ZoomOutCommand}" />
+        <KeyBinding Key="D0" Modifiers="Ctrl" Command="{Binding Zoom.ResetCommand}" />
+        <KeyBinding Key="NumPad0" Modifiers="Ctrl" Command="{Binding Zoom.ResetCommand}" />
     </Window.InputBindings>
 
     <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
         <Style x:Key="ExplorerItemStyle" TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
             <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
             <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
             <EventSetter Event="MouseDoubleClick" Handler="ExplorerItem_MouseDoubleClick" />
             <EventSetter Event="KeyDown" Handler="ExplorerItem_KeyDown" />
+            <EventSetter Event="MouseLeftButtonUp" Handler="ExplorerItem_Click" />
+            <EventSetter Event="PreviewMouseRightButtonDown" Handler="ExplorerItem_RightClick" />
+            <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}" />
+            <Setter Property="ContextMenu">
+                <Setter.Value>
+                    <ContextMenu>
+                        <MenuItem Header="Open"
+                                  Command="{Binding PlacementTarget.Tag.Explorer.OpenNodeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                        <Separator />
+                        <MenuItem Header="Open in Notepad"
+                                  Command="{Binding PlacementTarget.Tag.Explorer.OpenInNotepadCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                        <MenuItem Header="Open in Notepad++"
+                                  Visibility="{Binding PlacementTarget.Tag.Explorer.HasNotepadPlusPlus, RelativeSource={RelativeSource AncestorType=ContextMenu}, Converter={StaticResource BoolToVisibility}}"
+                                  Command="{Binding PlacementTarget.Tag.Explorer.OpenInNotepadPlusPlusCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                        <MenuItem Header="Show in File Explorer"
+                                  Command="{Binding PlacementTarget.Tag.Explorer.ShowInFileExplorerCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                        <Separator />
+                        <MenuItem Header="Copy path"
+                                  ToolTip="The file's location on this machine (a working copy when it came from an archive)"
+                                  Command="{Binding PlacementTarget.Tag.Explorer.CopyPathCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                        <MenuItem Header="Copy path in bundle"
+                                  ToolTip="Archive, folders and file name, for example Bundle.zip, logs.cab, agent.log"
+                                  Command="{Binding PlacementTarget.Tag.Explorer.CopyBundlePathCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                        <MenuItem Header="Copy name"
+                                  Command="{Binding PlacementTarget.Tag.Explorer.CopyNameCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                        <MenuItem Header="Copy link"
+                                  ToolTip="An artifact:// link that opens this file again"
+                                  Command="{Binding PlacementTarget.Tag.Explorer.CopyLinkCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                    </ContextMenu>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style x:Key="LoadingOverlay" TargetType="Border">
@@ -40,6 +88,9 @@
     </Window.Resources>
 
     <Grid>
+        <Grid.LayoutTransform>
+            <ScaleTransform ScaleX="{Binding Zoom.Scale}" ScaleY="{Binding Zoom.Scale}" />
+        </Grid.LayoutTransform>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -52,13 +103,17 @@
         <!-- Menu -->
         <Menu Grid.Row="0">
             <MenuItem Header="_File">
-                <MenuItem Header="_Open Bundle..." InputGestureText="Ctrl+O" Command="{Binding OpenBundleCommand}" />
+                <MenuItem Header="_Open Archive..." InputGestureText="Ctrl+O" Command="{Binding OpenBundleCommand}" />
                 <MenuItem Header="Open _Folder..." InputGestureText="Ctrl+Shift+O" Command="{Binding OpenFolderCommand}" />
                 <MenuItem Header="_Close Bundle" Command="{Binding CloseBundleCommand}" />
                 <Separator />
                 <MenuItem Header="E_xit" Command="ApplicationCommands.Close" InputGestureText="Alt+F4" />
             </MenuItem>
             <MenuItem Header="_View">
+                <MenuItem Header="Zoom _In" Command="{Binding Zoom.ZoomInCommand}" InputGestureText="Ctrl++" />
+                <MenuItem Header="Zoom _Out" Command="{Binding Zoom.ZoomOutCommand}" InputGestureText="Ctrl+-" />
+                <MenuItem Header="_Reset Zoom" Command="{Binding Zoom.ResetCommand}" InputGestureText="Ctrl+0" />
+                <Separator />
                 <MenuItem Header="_Overview" Command="{Binding Explorer.OpenOverviewCommand}" />
                 <MenuItem Header="_Timeline" Command="{Binding Explorer.OpenTimelineCommand}" />
                 <Separator />
@@ -79,7 +134,11 @@
             </MenuItem>
             <MenuItem Header="_Document">
                 <MenuItem Header="_Close" Command="{Binding Documents.CloseCommand}" InputGestureText="Ctrl+W" />
+                <MenuItem Header="_Refresh" Command="{Binding Documents.RefreshCommand}" CommandParameter="{Binding Documents.ActiveDocument}" InputGestureText="F5"
+                          ToolTip="Read the open file from disk again" />
+                <Separator />
                 <MenuItem Header="Close _Others" Command="{Binding Documents.CloseOthersCommand}" />
+                <MenuItem Header="Close _All" Command="{Binding Documents.CloseAllCommand}" />
             </MenuItem>
         </Menu>
 
@@ -95,7 +154,7 @@
                             Command="{Binding Documents.GoForwardCommand}"
                             FontFamily="{StaticResource IconFont}" Content="&#xE72A;" />
                     <Separator Margin="4,0" />
-                    <Button Style="{StaticResource ToolbarButton}" Content="Open Bundle" Command="{Binding OpenBundleCommand}" />
+                    <Button Style="{StaticResource ToolbarButton}" Content="Open Archive" Command="{Binding OpenBundleCommand}" />
                     <Button Style="{StaticResource ToolbarButton}" Content="Open Folder" Command="{Binding OpenFolderCommand}" />
                 </StackPanel>
                 <TextBox x:Name="GlobalSearchBox" DockPanel.Dock="Right" Width="360" Margin="12,0,0,0"
@@ -136,8 +195,46 @@
                 <Button DockPanel.Dock="Top" Content="Timeline" HorizontalContentAlignment="Left" Padding="8,4"
                         BorderThickness="0" Background="Transparent" Command="{Binding Explorer.OpenTimelineCommand}"
                         ToolTip="Everything with a timestamp, in time order" />
+                <!-- Filter by name, expand/collapse -->
+                <Grid DockPanel.Dock="Top" Margin="6,2,6,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="ExplorerFilterBox" Grid.Column="0" Height="26" MinHeight="0" Padding="4,0,4,0"
+                             VerticalContentAlignment="Center"
+                             Text="{Binding Explorer.FilterText, UpdateSourceTrigger=PropertyChanged}"
+                             ToolTip="Show only files and folders whose name contains this text. Escape clears it.">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Escape" Command="{Binding Explorer.ClearFilterCommand}" />
+                        </TextBox.InputBindings>
+                    </TextBox>
+                    <TextBlock Grid.Column="0" Text="Filter files" Margin="8,0,0,0" VerticalAlignment="Center"
+                               IsHitTestVisible="False" Foreground="{DynamicResource MutedTextBrush}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Explorer.FilterText}" Value="">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <Button Grid.Column="1" Margin="4,0,0,0" Width="26" Height="26" Padding="0" MinHeight="0" MinWidth="0"
+                            Style="{StaticResource ToolbarButton}" Content="+" FontSize="15"
+                            ToolTip="Expand all" Command="{Binding Explorer.ExpandAllCommand}" />
+                    <Button Grid.Column="2" Margin="2,0,0,0" Width="26" Height="26" Padding="0" MinHeight="0" MinWidth="0"
+                            Style="{StaticResource ToolbarButton}" Content="&#x2212;" FontSize="15"
+                            ToolTip="Collapse all" Command="{Binding Explorer.CollapseAllCommand}" />
+                </Grid>
+                <TextBlock DockPanel.Dock="Top" Text="{Binding Explorer.FilterStatus}" Margin="10,0,6,4"
+                           Foreground="{DynamicResource MutedTextBrush}" />
                 <TreeView x:Name="ExplorerTree" ItemsSource="{Binding Explorer.Nodes}"
                           ItemContainerStyle="{StaticResource ExplorerItemStyle}"
+                          VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
                           BorderThickness="0" Background="Transparent">
                     <TreeView.ItemTemplate>
                         <HierarchicalDataTemplate DataType="{x:Type vm:ExplorerNodeViewModel}" ItemsSource="{Binding Children}">
@@ -162,10 +259,22 @@
                     <TabControl.ItemContainerStyle>
                         <Style TargetType="TabItem" BasedOn="{StaticResource {x:Type TabItem}}">
                             <Setter Property="ToolTip" Value="{Binding ToolTip}" />
+                            <EventSetter Event="MouseDoubleClick" Handler="TabItem_DoubleClick" />
+                            <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}" />
                             <Setter Property="ContextMenu">
                                 <Setter.Value>
                                     <ContextMenu>
-                                        <MenuItem Header="Close" Command="{Binding PlacementTarget.DataContext.Documents.CloseCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                        <MenuItem Header="Close" InputGestureText="Ctrl+W"
+                                                  Command="{Binding PlacementTarget.Tag.Documents.CloseCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                        <MenuItem Header="Keep this tab"
+                                                  Command="{Binding PlacementTarget.Tag.Documents.PinCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                        <MenuItem Header="Close Others"
+                                                  Command="{Binding PlacementTarget.Tag.Documents.CloseOthersCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                        <MenuItem Header="Close All"
+                                                  Command="{Binding PlacementTarget.Tag.Documents.CloseAllCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
                                     </ContextMenu>
                                 </Setter.Value>
                             </Setter>
@@ -174,7 +283,33 @@
                     <TabControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:DocumentViewModel}">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding Title}" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsPreview}" Value="True">
+                                                    <Setter Property="FontStyle" Value="Italic" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <Button Margin="6,0,0,0" Padding="3,0" BorderThickness="0" Background="Transparent"
+                                        FontFamily="{StaticResource IconFont}" FontSize="10" Content="&#xE718;"
+                                        ToolTip="Keep this tab open (double-click the tab does the same)"
+                                        Command="{Binding DataContext.Documents.PinCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsPreview}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
                                 <Button Margin="8,0,0,0" Padding="3,0" BorderThickness="0" Background="Transparent"
                                         FontFamily="{StaticResource IconFont}" FontSize="9" Content="&#xE711;"
                                         ToolTip="Close (Ctrl+W)"
@@ -253,21 +388,41 @@
                 </Style>
             </StatusBar.Resources>
             <StatusBarItem>
-                <TextBlock>
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Text" Value="Ready" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Workspace.IsLoading}" Value="True">
-                                    <Setter Property="Text" Value="Loading bundle..." />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
+                <StackPanel Orientation="Horizontal">
+                    <ProgressBar Width="70" Height="4" Margin="0,0,8,0" MinHeight="0" IsIndeterminate="True"
+                                 Foreground="White" Background="{DynamicResource StatusBarTrackBrush}" BorderThickness="0" VerticalAlignment="Center">
+                        <ProgressBar.Style>
+                            <Style TargetType="ProgressBar" BasedOn="{StaticResource {x:Type ProgressBar}}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding StatusBar.IsBusy}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ProgressBar.Style>
+                    </ProgressBar>
+                    <TextBlock Text="{Binding StatusBar.Text}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
             </StatusBarItem>
             <StatusBarItem HorizontalAlignment="Right">
-                <TextBlock Text="{Binding Workspace.Current.Artifacts.Count, StringFormat='{}{0:N0} artifacts', FallbackValue=''}" />
+                <StackPanel Orientation="Horizontal">
+                    <Button Margin="0,0,14,0" Padding="4,0" MinHeight="0" BorderThickness="0" Background="Transparent" Foreground="White"
+                            Content="{Binding Zoom.Text, StringFormat='Zoom {0}'}" Command="{Binding Zoom.ResetCommand}"
+                            ToolTip="Interface zoom. Click to reset to 100%. Ctrl+mouse wheel, Ctrl++ and Ctrl+- change it.">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Zoom.IsScaled}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <TextBlock Text="{Binding Workspace.Current.Artifacts.Count, StringFormat='{}{0:N0} artifacts', FallbackValue=''}" />
+                </StackPanel>
             </StatusBarItem>
         </StatusBar>
     </Grid>

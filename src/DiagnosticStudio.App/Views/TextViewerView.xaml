@@ -16,6 +16,7 @@
             <Setter Property="Line" Value="{Binding}" />
             <Setter Property="Highlight" Value="{Binding DataContext.HighlightText, RelativeSource={RelativeSource AncestorType=ListBox}}" />
             <Setter Property="MatchCase" Value="{Binding DataContext.MatchCase, RelativeSource={RelativeSource AncestorType=ListBox}}" />
+            <Setter Property="Selection" Value="{Binding DataContext.Selection, RelativeSource={RelativeSource AncestorType=ListBox}}" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding DataContext.WrapText, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="True">
                     <Setter Property="TextWrapping" Value="Wrap" />
@@ -103,14 +104,20 @@
                 <Separator Margin="8,0" />
 
                 <CheckBox Content="Wrap" IsChecked="{Binding WrapText}" VerticalAlignment="Center" ToolTip="Word wrap" />
-                <Button Content="Copy" Margin="10,0,0,0" Padding="8,2" Command="ApplicationCommands.Copy"
-                        CommandTarget="{Binding ElementName=LineList}" ToolTip="Copy selected lines (Ctrl+C)" />
+                <ToggleButton Content="Lines" Margin="10,0,0,0" Padding="8,2" IsChecked="{Binding LineSelection}"
+                              ToolTip="Select whole lines instead of text. Off: drag across text to mark any part of it; double-click selects a word, triple-click or the line number a line." />
+                <Button Content="Copy" Margin="4,0,0,0" Padding="8,2" Command="ApplicationCommands.Copy"
+                        CommandTarget="{Binding ElementName=LineList}" ToolTip="Copy the selection (Ctrl+C)" />
             </StackPanel>
         </Border>
 
         <Border DockPanel.Dock="Bottom" Background="{DynamicResource PanelBrush}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="8,2">
-            <TextBlock Text="{Binding InfoText}" Foreground="{DynamicResource MutedTextBrush}" />
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Text="{Binding SelectionInfo}" Margin="12,0,0,0"
+                           Foreground="{DynamicResource MutedTextBrush}" />
+                <TextBlock Text="{Binding InfoText}" Foreground="{DynamicResource MutedTextBrush}" />
+            </DockPanel>
         </Border>
 
         <ListBox x:Name="LineList" ItemsSource="{Binding Lines}" ItemTemplate="{StaticResource LineTemplate}"
@@ -119,7 +126,16 @@
                  FontFamily="{StaticResource MonoFont}" FontSize="12"
                  VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
                  VirtualizingPanel.ScrollUnit="Item" ScrollViewer.CanContentScroll="True"
-                 SelectionChanged="OnSelectionChanged">
+                 SelectionChanged="OnSelectionChanged"
+                 PreviewMouseLeftButtonDown="OnListMouseDown" PreviewMouseMove="OnListMouseMove"
+                 PreviewMouseLeftButtonUp="OnListMouseUp" LostMouseCapture="OnListLostCapture">
+            <ListBox.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Copy" Command="ApplicationCommands.Copy" InputGestureText="Ctrl+C"
+                              CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                    <MenuItem Header="Select all" InputGestureText="Ctrl+A" Click="OnSelectAllClick" />
+                </ContextMenu>
+            </ListBox.ContextMenu>
             <ListBox.Style>
                 <Style TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
                     <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />

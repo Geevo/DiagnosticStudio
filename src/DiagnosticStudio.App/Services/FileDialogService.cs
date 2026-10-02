@@ -15,8 +15,8 @@ public sealed class FileDialogService : IFileDialogService
     {
         var dialog = new OpenFileDialog
         {
-            Title = "Open diagnostic bundle",
-            Filter = "Diagnostic bundles (*.zip)|*.zip|All files (*.*)|*.*",
+            Title = "Open diagnostic archive",
+            Filter = "Archives (*.zip;*.cab)|*.zip;*.cab|All files (*.*)|*.*",
             CheckFileExists = true,
         };
 

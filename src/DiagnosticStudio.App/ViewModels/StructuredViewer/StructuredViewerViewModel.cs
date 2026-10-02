@@ -1,10 +1,13 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.IO;
+using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DiagnosticStudio.App.ViewModels.TextViewer;
 using DiagnosticStudio.Core.Documents;
 using DiagnosticStudio.Core.Navigation;
+using DiagnosticStudio.Parsers.Structured;
 using DiagnosticStudio.Search;
 
 namespace DiagnosticStudio.App.ViewModels.StructuredViewer;
@@ -16,6 +19,13 @@ public sealed partial class StructuredViewerViewModel : ObservableObject, ILocat
     public const int RawTab = 1;
 
     private const int FindDebounceMilliseconds = 250;
+
+    // Files written on one line are hard to read raw, so the Raw tab can show an indented copy. It is derived text with
+    // its own line numbers; the original is one toggle away and is what every stored line link points into.
+    private TextViewerViewModel? _formattedRaw;
+    private StructuredDocument? _formattedDocument;
+    private SearchHighlight? _lastHighlight;
+    private CancellationTokenSource? _formatCts;
 
     private CancellationTokenSource? _searchCts;
     private IReadOnlyList<StructuredMatch> _matches = Array.Empty<StructuredMatch>();
@@ -38,22 +48,62 @@ public sealed partial class StructuredViewerViewModel : ObservableObject, ILocat
             CultureInfo.CurrentCulture,
             $"{(document.Format == StructuredFormat.Xml ? "XML" : "JSON")} · {document.NodeCount:N0} nodes · {document.RawSource.LineCount:N0} lines · {document.RawSource.EncodingName}");
 
+        if (document.ReadProblem is { } problem)
+        {
+            ReadProblemText = "Only part of this file could be read: " + problem
+                + " The tree shows what came before that point; the Raw tab has everything.";
+            InfoText += " · partly read";
+        }
+
         // Open on the first item, expanded, so the pane is never blank.
         if (Roots.Count > 0)
         {
             Roots[0].IsExpanded = true;
             Roots[0].IsSelected = true;
         }
+
+        // A dense file (long lines holding many nodes) opens indented.
+        PrettyRaw = LooksMinified(document);
+    }
+
+    /// <summary>Few lines for the number of nodes: written without indentation, so the raw text is one wall of characters.</summary>
+    internal static bool LooksMinified(StructuredDocument document)
+    {
+        var lines = Math.Max(1, document.RawSource.LineCount);
+        return document.RawSource.ByteLength / lines > 160 && document.NodeCount / lines > 20;
     }
 
     public StructuredDocument Document { get; }
 
-    /// <summary>The complete file as text; always available.</summary>
+    /// <summary>The complete file as text exactly as collected; always available.</summary>
     public TextViewerViewModel Raw { get; }
+
+    /// <summary>What the Raw tab shows: the indented copy when it is on and ready, otherwise the original.</summary>
+    public TextViewerViewModel ActiveRaw => PrettyRaw && _formattedRaw is not null ? _formattedRaw : Raw;
+
+    private bool IsShowingFormatted => PrettyRaw && _formattedRaw is not null && _formattedDocument is not null;
+
+    /// <summary>The Raw tab shows an indented copy.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActiveRaw))]
+    private bool _prettyRaw;
+
+    /// <summary>The file could be re-indented (it is valid and readable).</summary>
+    [ObservableProperty]
+    private bool _prettyAvailable = true;
+
+    [ObservableProperty]
+    private string _prettyStatus = string.Empty;
+
+    /// <summary>The indented copy being built; lets callers and tests await it.</summary>
+    public Task PendingFormat { get; private set; } = Task.CompletedTask;
 
     public ObservableCollection<StructuredNodeViewModel> Roots { get; } = new();
 
     public string InfoText { get; }
+
+    /// <summary>Why only part of the file is in the tree, or <c>null</c> when all of it is.</summary>
+    public string? ReadProblemText { get; }
 
     /// <summary>Raised after a node was selected from code (find, navigation) so the view can scroll the tree to it.</summary>
     public event EventHandler<StructuredNode>? NodeRevealRequested;
@@ -178,8 +228,19 @@ public sealed partial class StructuredViewerViewModel : ObservableObject, ILocat
                 // The line is a place in the raw text. Show it there, and keep the tree on the node it belongs to.
                 var clamped = (int)Math.Min(line, int.MaxValue);
                 SelectedTabIndex = RawTab;
-                Raw.NavigateToLine(clamped);
-                if (Document.NodeAtLine(clamped) is { } atLine)
+                var atLine = Document.NodeAtLine(clamped);
+
+                // The line is a line of the file as collected. In the indented copy it is wherever its node went.
+                if (IsShowingFormatted && atLine is not null)
+                {
+                    ActiveRaw.NavigateToLine(RawLineOf(atLine));
+                }
+                else
+                {
+                    ActiveRaw.NavigateToLine(clamped);
+                }
+
+                if (atLine is not null)
                 {
                     Reveal(atLine, scroll: false);
                 }
@@ -191,7 +252,12 @@ public sealed partial class StructuredViewerViewModel : ObservableObject, ILocat
         }
     }
 
-    public void Highlight(SearchHighlight highlight) => Raw.Highlight(highlight);
+    public void Highlight(SearchHighlight highlight)
+    {
+        _lastHighlight = highlight;
+        Raw.Highlight(highlight);
+        _formattedRaw?.Highlight(highlight);
+    }
 
     /// <summary>Expands the tree down to <paramref name="target"/> and selects it.</summary>
     public void Reveal(StructuredNode target, bool scroll = true)
@@ -249,13 +315,122 @@ public sealed partial class StructuredViewerViewModel : ObservableObject, ILocat
     [RelayCommand]
     private void ShowInRawSource()
     {
-        var line = SelectedNode?.Node?.Line ?? 0;
+        var line = SelectedNode?.Node is { } node ? RawLineOf(node) : 0;
         SelectedTabIndex = RawTab;
         if (line > 0)
         {
-            Raw.NavigateToLine(line);
+            ActiveRaw.NavigateToLine(line);
         }
     }
+
+    // ---- indented copy of the raw text ----
+
+    /// <summary>Where a node starts in the text the Raw tab is showing.</summary>
+    private int RawLineOf(StructuredNode node) =>
+        IsShowingFormatted && _formattedDocument!.FindNode(Document.PathOf(node)) is { } mapped ? mapped.Line : node.Line;
+
+    partial void OnPrettyRawChanged(bool value)
+    {
+        if (!value)
+        {
+            SyncRawToSelection();
+            return;
+        }
+
+        if (_formattedRaw is null)
+        {
+            StartFormatting();
+        }
+        else
+        {
+            SyncRawToSelection();
+        }
+    }
+
+    /// <summary>After switching between the copies, keep the Raw tab on the selected node.</summary>
+    private void SyncRawToSelection()
+    {
+        if (SelectedTabIndex == RawTab && SelectedNode?.Node is { } node)
+        {
+            ActiveRaw.NavigateToLine(RawLineOf(node));
+        }
+    }
+
+    private void StartFormatting()
+    {
+        var path = Document.Artifact.ExtractedPath;
+        if (path is null)
+        {
+            PrettyAvailable = false;
+            PrettyRaw = false;
+            PrettyStatus = "This file cannot be indented: there is no file on disk to read.";
+            return;
+        }
+
+        _formatCts?.Cancel();
+        _formatCts = new CancellationTokenSource();
+        PrettyStatus = "Indenting...";
+        PendingFormat = FormatAsync(path, _formatCts.Token);
+    }
+
+    private async Task FormatAsync(string path, CancellationToken token)
+    {
+        try
+        {
+            var format = Document.Format;
+            var (text, root, count) = await Task.Run(
+                () =>
+                {
+                    var bytes = File.ReadAllBytes(path);
+                    var indented = format == StructuredFormat.Json
+                        ? StructuredFormatter.FormatJson(bytes, token)
+                        : StructuredFormatter.FormatXml(bytes, token);
+
+                    // Parse the indented text too: its nodes know their lines in it, which is how the tree and the
+                    // text stay linked.
+                    var (parsedRoot, parsedCount) = format == StructuredFormat.Json
+                        ? JsonStructureReader.Read(Encoding.UTF8.GetBytes(indented), token)
+                        : XmlStructureReader.Read(new StringReader(indented), token);
+                    return (indented, parsedRoot, parsedCount);
+                },
+                token).ConfigureAwait(true);
+
+            token.ThrowIfCancellationRequested();
+            var source = new InMemoryTextSource(text, "indented copy");
+            _formattedDocument = new StructuredDocument
+            {
+                Artifact = Document.Artifact,
+                Format = format,
+                Root = root,
+                RawSource = source,
+                NodeCount = count,
+            };
+            _formattedRaw = new TextViewerViewModel(source);
+            if (_lastHighlight is { } highlight)
+            {
+                _formattedRaw.Highlight(highlight);
+            }
+
+            PrettyStatus = string.Create(
+                CultureInfo.CurrentCulture,
+                $"Indented copy, {source.LineCount:N0} lines. Switch it off to see the file exactly as it was collected.");
+            OnPropertyChanged(nameof(ActiveRaw));
+            SyncRawToSelection();
+        }
+        catch (OperationCanceledException)
+        {
+            // Closed or replaced.
+        }
+        catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException)
+        {
+            PrettyAvailable = false;
+            PrettyRaw = false;
+            PrettyStatus = "This file cannot be indented: " + ex.Message;
+        }
+    }
+
+    /// <summary>Stops the background work for the indented copy; called when the tab closes.</summary>
+    public void Cancel() => _formatCts?.Cancel();
 
     // ---- find ----
 

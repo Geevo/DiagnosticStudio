@@ -1,9 +1,10 @@
-using System.Windows;
+﻿using System.Windows;
 using DiagnosticStudio.App.Services;
 using DiagnosticStudio.App.ViewModels;
 using DiagnosticStudio.App.ViewModels.Search;
 using DiagnosticStudio.Core.Archives;
 using DiagnosticStudio.Core.Documents;
+using DiagnosticStudio.Core.Findings;
 using DiagnosticStudio.Core.Ingestion;
 using DiagnosticStudio.Core.Navigation;
 using DiagnosticStudio.Core.Parsing;
@@ -14,6 +15,7 @@ using DiagnosticStudio.Rules;
 using DiagnosticStudio.Ingestion;
 using DiagnosticStudio.Parsers;
 using DiagnosticStudio.Parsers.Structured;
+using DiagnosticStudio.Parsers.Tables;
 using DiagnosticStudio.Search;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,6 +25,7 @@ public partial class App : Application
 {
     private ServiceProvider? _services;
     private ThemeService? _theme;
+    private UiResponsivenessMonitor? _responsiveness;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -35,9 +38,19 @@ public partial class App : Application
         _theme.Start();
 
         _services = ConfigureServices();
+
+        // One failed click must not close the application in the middle of an investigation.
+        var reporter = new UnhandledExceptionReporter(_services.GetRequiredService<IOutputLog>());
+        DispatcherUnhandledException += (_, args) => args.Handled = reporter.Report(args.Exception);
+
         var window = _services.GetRequiredService<MainWindow>();
         MainWindow = window;
         window.Show();
+
+        // Reports freezes of the window to the Output panel, with what the application was doing.
+        var statusBar = _services.GetRequiredService<StatusBarViewModel>();
+        _responsiveness = new UiResponsivenessMonitor(Dispatcher, _services.GetRequiredService<IOutputLog>(), () => statusBar.Text);
+        _responsiveness.Start();
 
         _ = SweepStaleWorkspacesAsync(_services.GetRequiredService<IOutputLog>());
 
@@ -77,8 +90,15 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         // Remove the app-owned extraction directory; never touches the original bundle.
-        _services?.GetService<WorkspaceViewModel>()?.Close();
+        if (_services?.GetService<WorkspaceViewModel>() is { } workspace)
+        {
+            workspace.Close();
+
+            // Leave nothing behind if the removal is quick; the next start sweeps whatever is left.
+            workspace.PendingCleanup.Wait(TimeSpan.FromSeconds(5));
+        }
         _services?.Dispose();
+        _responsiveness?.Dispose();
         _theme?.Dispose();
         base.OnExit(e);
     }
@@ -94,7 +114,11 @@ public partial class App : Application
         services.AddSingleton<IEventMessageFormatter, ProviderMessageFormatter>();
         services.AddSingleton<IDiagnosticParser, RegFileParser>();
         services.AddSingleton<IDiagnosticParser, EvtxParser>();
+        services.AddSingleton<IDiagnosticParser, EtlParser>();
         services.AddSingleton<IDiagnosticParser, StructuredFileParser>();
+        services.AddSingleton<IDiagnosticParser, HtmlFileParser>();
+        services.AddSingleton<IDiagnosticParser, CmTraceParser>();
+        services.AddSingleton<IDiagnosticParser, CsvParser>();
         services.AddSingleton<IDiagnosticParser, TextLogParser>();
         services.AddSingleton<IDiagnosticParser, UnsupportedArtifactParser>();
 
@@ -110,11 +134,16 @@ public partial class App : Application
             services.AddSingleton(rule);
         }
 
+        services.AddSingleton<IBackgroundWorkGate>(_ => new BackgroundWorkGate(BackgroundWorkGate.DefaultSlots));
         services.AddSingleton<IFindingsService, FindingsService>();
+        services.AddSingleton<IFileHealthService, FileHealthService>();
         services.AddSingleton<ITimelineService, TimelineService>();
 
         // Application services.
         services.AddSingleton<IFileDialogService, FileDialogService>();
+        services.AddSingleton<IExternalToolService, ExternalToolService>();
+        services.AddSingleton<IClipboardService, ClipboardService>();
+        services.AddSingleton<ISettingsStore, FileSettingsStore>();
         services.AddSingleton<OutputViewModel>();
         services.AddSingleton<IOutputLog>(sp => sp.GetRequiredService<OutputViewModel>());
 
@@ -124,6 +153,8 @@ public partial class App : Application
         services.AddSingleton<ExplorerViewModel>();
         services.AddSingleton<ProblemsViewModel>();
         services.AddSingleton<SearchResultsViewModel>();
+        services.AddSingleton<StatusBarViewModel>();
+        services.AddSingleton<ZoomViewModel>();
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<MainWindow>();
 

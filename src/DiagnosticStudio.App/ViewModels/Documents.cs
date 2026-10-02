@@ -6,7 +6,9 @@ using DiagnosticStudio.Core.Artifacts;
 using DiagnosticStudio.Core.Documents;
 using DiagnosticStudio.App.ViewModels.EventLogViewer;
 using DiagnosticStudio.App.ViewModels.RegistryViewer;
+using DiagnosticStudio.App.ViewModels.HtmlViewer;
 using DiagnosticStudio.App.ViewModels.StructuredViewer;
+using DiagnosticStudio.App.ViewModels.TableViewer;
 using DiagnosticStudio.App.ViewModels.TextViewer;
 using DiagnosticStudio.Core.Ingestion;
 using DiagnosticStudio.Core.Navigation;
@@ -27,6 +29,18 @@ public abstract partial class DocumentViewModel : ObservableObject
 
     /// <summary>Evidence location for documents tied to an artifact; <c>null</c> for the Overview.</summary>
     public virtual DiagnosticLocation? Location => null;
+
+    /// <summary>
+    /// A tab opened by a single click in the explorer. It is shown in italics and replaced by the next one; pinning it
+    /// (double-click, or the pin on the tab) keeps it.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isPreview;
+
+    /// <summary>Called when the tab is closed or replaced, so work done only for it can stop.</summary>
+    public virtual void OnClosed()
+    {
+    }
 }
 
 public sealed class OverviewDocumentViewModel : DocumentViewModel
@@ -36,7 +50,7 @@ public sealed class OverviewDocumentViewModel : DocumentViewModel
         if (workspace is null)
         {
             Sections = Array.Empty<OverviewSection>();
-            EmptyMessage = "No bundle is open. Drop a ZIP or an extracted folder here, or use File > Open Bundle (Ctrl+O).";
+            EmptyMessage = "No bundle is open. Drop a ZIP or an extracted folder here, or use File > Open Archive (Ctrl+O).";
             return;
         }
 
@@ -118,6 +132,7 @@ public sealed class OverviewDocumentViewModel : DocumentViewModel
         ArtifactType.Xml => "XML files",
         ArtifactType.Json => "JSON files",
         ArtifactType.Html => "HTML files",
+        ArtifactType.Csv => "CSV files",
         ArtifactType.Trace => "Traces (ETL)",
         ArtifactType.Binary => "Binary files",
         _ => "Unclassified",
@@ -179,15 +194,45 @@ public sealed partial class ArtifactDocumentViewModel : DocumentViewModel
     [ObservableProperty]
     private bool _isLoading = true;
 
+    /// <summary>The file has no content at all (0 bytes), so a blank viewer is not a rendering fault.</summary>
+    [ObservableProperty]
+    private bool _isEmpty;
+
     [ObservableProperty]
     private string? _statusMessage;
 
+    private readonly CancellationTokenSource _closed = new();
+    private bool _reloaded;
+
+    /// <summary>Closing the tab stops loading the file, unless something else (search, the rules) still needs it.</summary>
+    public override void OnClosed() => _closed.Cancel();
+
+    /// <summary>
+    /// Reads the file again and shows the new content, returning to where the engineer was (the same line or event) when
+    /// the new content still has it. The old content stays on screen until the new is ready.
+    /// </summary>
+    public Task ReloadAsync(IDocumentLoader loader, IOutputLog output, CancellationToken cancellationToken)
+    {
+        if (Viewer is ICurrentPosition here && here.CurrentPosition(Artifact.Id) is { } location)
+        {
+            _pendingLocation = location;
+            _pendingHighlight = null;
+        }
+
+        IsLoading = true;
+        _reloaded = true;
+        return LoadAsync(loader, output, cancellationToken);
+    }
+
     public async Task LoadAsync(IDocumentLoader loader, IOutputLog output, CancellationToken cancellationToken)
     {
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _closed.Token);
+        cancellationToken = linked.Token;
         try
         {
             var result = await loader.LoadAsync(Artifact, cancellationToken).ConfigureAwait(true);
             Document = result.Document;
+            IsEmpty = IsEmptyFile(Artifact, result.Document);
             StatusMessage = result.Document is UnsupportedDocument unsupported ? unsupported.Reason : null;
             if (result.FailureMessage is { } failure)
             {
@@ -213,6 +258,23 @@ public sealed partial class ArtifactDocumentViewModel : DocumentViewModel
         }
     }
 
+    private static bool IsEmptyFile(DiagnosticArtifact artifact, DiagnosticDocument document)
+    {
+        if (DocumentText.LinesOf(document) is { ByteLength: 0 })
+        {
+            return true;
+        }
+
+        try
+        {
+            return artifact.ExtractedPath is { } path && new FileInfo(path) is { Exists: true, Length: 0 };
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
     private object? CreateViewer(DiagnosticDocument document, IOutputLog output)
     {
         switch (document)
@@ -221,6 +283,16 @@ public sealed partial class ArtifactDocumentViewModel : DocumentViewModel
                 var textViewer = new TextViewerViewModel(text.Lines);
                 textViewer.LineNavigated += RaiseLineNavigated;
                 return textViewer;
+
+            case HtmlDocument html:
+                var htmlViewer = new HtmlViewerViewModel(html);
+                htmlViewer.Raw.LineNavigated += RaiseLineNavigated;
+                return htmlViewer;
+
+            case TableDocument table:
+                var tableViewer = new TableViewerViewModel(table);
+                tableViewer.Raw.LineNavigated += RaiseLineNavigated;
+                return tableViewer;
 
             case StructuredDocument structured:
                 var structuredViewer = new StructuredViewerViewModel(structured);
@@ -241,7 +313,7 @@ public sealed partial class ArtifactDocumentViewModel : DocumentViewModel
                 return registryViewer;
 
             case EventLogDocument eventLog:
-                var eventViewer = new EventLogViewerViewModel(eventLog);
+                var eventViewer = new EventLogViewerViewModel(eventLog, _reloaded);
                 if (eventViewer.WarningText is { } eventWarning)
                 {
                     output.Write(OutputSeverity.Warning, "EventLog", $"{Artifact.ProvenanceDisplay}: {eventWarning}");

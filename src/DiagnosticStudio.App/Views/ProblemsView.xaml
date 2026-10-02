@@ -41,7 +41,7 @@
             </ProgressBar.Style>
         </ProgressBar>
 
-        <TreeView ItemsSource="{Binding Groups}" ItemContainerStyle="{StaticResource ProblemItemStyle}"
+        <TreeView ItemsSource="{Binding Items}" ItemContainerStyle="{StaticResource ProblemItemStyle}"
                   BorderThickness="0" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
             <TreeView.Resources>
                 <HierarchicalDataTemplate DataType="{x:Type vm:ProblemGroupViewModel}" ItemsSource="{Binding Findings}">
@@ -50,6 +50,28 @@
                         <TextBlock Text="{Binding Title}" FontWeight="SemiBold" VerticalAlignment="Center" />
                     </StackPanel>
                 </HierarchicalDataTemplate>
+
+                <HierarchicalDataTemplate DataType="{x:Type vm:FileProblemGroupViewModel}" ItemsSource="{Binding Items}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource SeverityGlyph}" />
+                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    </StackPanel>
+                </HierarchicalDataTemplate>
+
+                <DataTemplate DataType="{x:Type vm:FileProblemViewModel}">
+                    <StackPanel Margin="0,2" ToolTip="{Binding Where}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8A5;" FontFamily="{StaticResource IconFont}" Margin="0,0,6,0"
+                                       Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Where}" Margin="10,0,0,0" VerticalAlignment="Center" FontSize="11"
+                                       Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" MaxWidth="600" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" MaxWidth="1000" HorizontalAlignment="Left" Margin="20,0,0,0" />
+                        <TextBlock Text="{Binding Remedy}" TextWrapping="Wrap" MaxWidth="1000" HorizontalAlignment="Left" Margin="20,0,0,0"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                    </StackPanel>
+                </DataTemplate>
 
                 <HierarchicalDataTemplate DataType="{x:Type vm:FindingViewModel}" ItemsSource="{Binding Evidence}">
                     <StackPanel Margin="0,2">

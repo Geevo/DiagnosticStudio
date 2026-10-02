@@ -124,6 +124,9 @@ public sealed partial class TimelineDocumentViewModel : DocumentViewModel
     }
 
     public override string Title => "Timeline";
+
+    /// <summary>Lets Back and Forward return to the timeline; its selected row stays as it was left.</summary>
+    public override DiagnosticLocation Location { get; } = DiagnosticLocation.ForTimeline();
     public override string? ToolTip => "Everything with a timestamp in the bundle's event logs and text logs, in time order";
 
     public IReadOnlyList<SeverityOption> SeverityOptions => SeverityOption.All;

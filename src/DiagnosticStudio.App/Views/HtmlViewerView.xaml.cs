@@ -26,8 +26,34 @@ public partial class HtmlViewerView : UserControl
         InitializeComponent();
     }
 
-    private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e) =>
+    private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (_viewModel is not null)
+        {
+            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        }
+
         _viewModel = e.NewValue as HtmlViewerViewModel;
+        if (_viewModel is not null)
+        {
+            _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        }
+    }
+
+    // The scripting switch only takes effect for a page that is loaded afterwards, so the page is loaded again.
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(HtmlViewerViewModel.AllowScripts)
+            || _viewModel is not { CanRender: true, Markup: { } markup } vm
+            || _web?.CoreWebView2 is not { } core)
+        {
+            return;
+        }
+
+        core.Settings.IsScriptEnabled = vm.AllowScripts;
+        _allowOwnNavigation = true;
+        _web.NavigateToString(HtmlSandbox.Prepare(markup, vm.AllowScripts));
+    }
 
     // One browser environment for the whole application, with no saved profile: nothing from a page is kept.
     private static Task<CoreWebView2Environment> Environment() =>
@@ -56,7 +82,7 @@ public partial class HtmlViewerView : UserControl
 
             Lock(web.CoreWebView2, environment, vm);
             _allowOwnNavigation = true;
-            web.NavigateToString(HtmlSandbox.Prepare(markup));
+            web.NavigateToString(HtmlSandbox.Prepare(markup, vm.AllowScripts));
         }
         catch (Exception ex) when (ex is WebView2RuntimeNotFoundException or System.Runtime.InteropServices.COMException or InvalidOperationException or ArgumentException or IOException)
         {
@@ -72,7 +98,7 @@ public partial class HtmlViewerView : UserControl
     private void Lock(CoreWebView2 core, CoreWebView2Environment environment, HtmlViewerViewModel vm)
     {
         var settings = core.Settings;
-        settings.IsScriptEnabled = false;
+        settings.IsScriptEnabled = vm.AllowScripts;
         settings.AreDefaultScriptDialogsEnabled = false;
         settings.IsWebMessageEnabled = false;
         settings.AreHostObjectsAllowed = false;

@@ -20,22 +20,32 @@ public static partial class HtmlSandbox
         + "connect-src 'none'; frame-src 'none'; object-src 'none'; media-src 'none'; base-uri 'none'; "
         + "form-action 'none'; frame-ancestors 'none'";
 
+    /// <summary>
+    /// The same policy with the page's own inline scripts allowed, for pages that draw nothing without them. Everything
+    /// else stays shut, so a script still cannot fetch, post, frame, open or navigate anywhere: there is nowhere for it
+    /// to send anything. It can only change the page.
+    /// </summary>
+    public const string ScriptPolicy =
+        "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; "
+        + "connect-src 'none'; frame-src 'none'; object-src 'none'; media-src 'none'; base-uri 'none'; "
+        + "form-action 'none'; frame-ancestors 'none'";
+
     // Pages are written for a white background. Put first so that a page's own styles still win.
     private const string BaseStyle = "<style>html{background-color:#ffffff;color:#000000;color-scheme:light}</style>";
 
-    private static readonly string PolicyElement =
-        "<meta http-equiv=\"Content-Security-Policy\" content=\"" + ContentSecurityPolicy + "\">" + BaseStyle;
+    private static string PolicyElement(bool allowScripts) =>
+        "<meta http-equiv=\"Content-Security-Policy\" content=\"" + (allowScripts ? ScriptPolicy : ContentSecurityPolicy) + "\">" + BaseStyle;
 
     /// <summary>
     /// The page with the policy as the first thing in it (after a doctype, which must stay first to keep the page's
     /// layout mode), then a plain light base style. A policy the page brings itself can only narrow this one, never
     /// widen it.
     /// </summary>
-    public static string Prepare(string html)
+    public static string Prepare(string html, bool allowScripts = false)
     {
         var doctype = LeadingDoctype().Match(html);
         var at = doctype.Success ? doctype.Length : 0;
-        return html.Insert(at, PolicyElement);
+        return html.Insert(at, PolicyElement(allowScripts));
     }
 
     /// <summary>

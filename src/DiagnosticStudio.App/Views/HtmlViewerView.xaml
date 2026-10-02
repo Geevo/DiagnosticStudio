@@ -23,8 +23,13 @@
                     <!-- What keeps the page harmless -->
                     <Border DockPanel.Dock="Top" Background="{DynamicResource PanelBrush}"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,3">
-                        <TextBlock Text="Shown with scripts, links, forms and network access blocked. Nothing in the file runs or is fetched."
-                                   Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" />
+                        <DockPanel>
+                            <CheckBox DockPanel.Dock="Right" Content="Allow JavaScript" Margin="12,0,0,0" VerticalAlignment="Center"
+                                      IsChecked="{Binding AllowScripts}" IsEnabled="{Binding CanRender}"
+                                      ToolTip="Run the page's own scripts. For pages that show nothing without them. Network access, links, forms and frames stay blocked." />
+                            <TextBlock Text="{Binding Note}" Foreground="{DynamicResource MutedTextBrush}"
+                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        </DockPanel>
                     </Border>
 
                     <!-- The browser component is created here when the tab is shown -->

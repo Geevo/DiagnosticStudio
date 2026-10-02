@@ -100,6 +100,38 @@ public sealed class HtmlViewerTests : IDisposable
             prepared.IndexOf("background-color:#ffffff", StringComparison.Ordinal) < prepared.IndexOf("background:#123", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void Scripts_are_off_unless_asked_for()
+    {
+        Assert.Contains("script-src 'none'", Policy(HtmlSandbox.Prepare("<p>x</p>")));
+        Assert.Contains("script-src 'none'", Policy(HtmlSandbox.Prepare("<p>x</p>", allowScripts: false)));
+    }
+
+    [Fact]
+    public void With_scripts_allowed_only_inline_scripts_run_and_everything_else_stays_shut()
+    {
+        var policy = Policy(HtmlSandbox.Prepare("<p>x</p>", allowScripts: true));
+
+        Assert.Contains("script-src 'unsafe-inline'", policy);
+        Assert.DoesNotContain("'unsafe-eval'", policy);
+        Assert.DoesNotContain("http", policy);
+        Assert.DoesNotContain("*", policy);
+        Assert.DoesNotContain("'self'", policy);
+        foreach (var shut in new[] { "default-src 'none'", "connect-src 'none'", "frame-src 'none'", "object-src 'none'", "form-action 'none'", "base-uri 'none'", "frame-ancestors 'none'", "img-src data:", "font-src data:" })
+        {
+            Assert.Contains(shut, policy);
+        }
+    }
+
+    [Fact]
+    public void Allowing_scripts_still_puts_the_policy_first_and_keeps_the_doctype_first()
+    {
+        var prepared = HtmlSandbox.Prepare("<!DOCTYPE html><html><script>x()</script></html>", allowScripts: true);
+
+        Assert.StartsWith("<!DOCTYPE html><meta http-equiv=\"Content-Security-Policy\"", prepared);
+        Assert.True(prepared.IndexOf("Content-Security-Policy", StringComparison.Ordinal) < prepared.IndexOf("<script>", StringComparison.Ordinal));
+    }
+
     [Theory]
     [InlineData("data:text/html;charset=utf-8,hello", true)]
     [InlineData("DATA:image/png;base64,AAAA", true)]
@@ -270,6 +302,32 @@ public sealed class HtmlViewerTests : IDisposable
 
         Assert.Equal("needle", vm.Raw.FindText);
         Assert.True(vm.Raw.MatchCase);
+    }
+
+    [Fact]
+    public void Scripts_are_off_when_a_page_opens_and_the_note_changes_when_they_are_allowed()
+    {
+        var vm = Viewer();
+
+        Assert.False(vm.AllowScripts);
+        Assert.Equal(HtmlViewerViewModel.SandboxNote, vm.Note);
+        var changed = new List<string?>();
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        vm.AllowScripts = true;
+
+        Assert.Equal(HtmlViewerViewModel.ScriptsNote, vm.Note);
+        Assert.Contains(nameof(HtmlViewerViewModel.Note), changed);
+        Assert.Contains("cannot send or fetch anything", HtmlViewerViewModel.ScriptsNote);
+    }
+
+    [Fact]
+    public void A_new_viewer_never_inherits_the_choice()
+    {
+        var first = Viewer();
+        first.AllowScripts = true;
+
+        Assert.False(Viewer().AllowScripts);
     }
 
     [Fact]

@@ -18,6 +18,9 @@ public sealed partial class HtmlViewerViewModel : ObservableObject, ILocationNav
     public const string SandboxNote =
         "Shown with scripts, links, forms and network access blocked. Nothing in the file runs or is fetched.";
 
+    public const string ScriptsNote =
+        "The page's own scripts are running. Links, forms, frames and network access are still blocked: a script can change the page but cannot send or fetch anything.";
+
     public HtmlViewerViewModel(HtmlDocument document)
     {
         Document = document;
@@ -52,6 +55,17 @@ public sealed partial class HtmlViewerViewModel : ObservableObject, ILocationNav
 
     [ObservableProperty]
     private int _selectedTabIndex;
+
+    /// <summary>
+    /// Let the page run its own scripts (some pages draw nothing without them). Off for every page when it opens, and not
+    /// remembered: it is a choice about this page. The network stays blocked either way.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Note))]
+    private bool _allowScripts;
+
+    /// <summary>What is blocked for the page as it is shown now.</summary>
+    public string Note => AllowScripts ? ScriptsNote : SandboxNote;
 
     /// <summary>Called by the view when the browser component cannot draw the page; the source is shown instead.</summary>
     public void ReportRenderFailure(string message)

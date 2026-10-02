@@ -4,6 +4,38 @@
              xmlns:vm="clr-namespace:DiagnosticStudio.App.ViewModels">
 
     <UserControl.Resources>
+        <!-- One of the Errors / Warnings / Messages filters: a glyph and a count, outlined while it is on. -->
+        <Style x:Key="SeverityFilter" TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
+            <Setter Property="Focusable" Value="True" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="Padding" Value="6,2" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Bd" CornerRadius="3" BorderThickness="1" BorderBrush="Transparent"
+                                Background="Transparent" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SelectedLineBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="False">
+                                <Setter Property="Opacity" Value="0.5" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource MutedTextBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="ProblemItemStyle" TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
             <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
             <EventSetter Event="MouseLeftButtonUp" Handler="OnItemClick" />
@@ -24,8 +56,36 @@
     <DockPanel>
         <Border DockPanel.Dock="Top" Background="{DynamicResource PanelBrush}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,4">
-            <TextBlock Text="{Binding StatusText}" TextTrimming="CharacterEllipsis"
-                       Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Margin="0,0,10,0">
+                    <ToggleButton Style="{StaticResource SeverityFilter}" IsChecked="{Binding ShowErrors}"
+                                  ToolTip="Show or hide errors: findings of error severity and files that could not be read.">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xEA39;" FontFamily="{StaticResource IconFont}" Foreground="{DynamicResource ErrorTextBrush}"
+                                       Margin="0,0,5,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding ErrorsLabel}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton Style="{StaticResource SeverityFilter}" IsChecked="{Binding ShowWarnings}"
+                                  ToolTip="Show or hide warnings: findings of warning severity and files only partly read.">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE7BA;" FontFamily="{StaticResource IconFont}" Foreground="{DynamicResource WarningTextBrush}"
+                                       Margin="0,0,5,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding WarningsLabel}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton Style="{StaticResource SeverityFilter}" IsChecked="{Binding ShowMessages}"
+                                  ToolTip="Show or hide messages: information findings, files opened with a caution, with no viewer, or empty.">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE946;" FontFamily="{StaticResource IconFont}" Foreground="{DynamicResource AccentBrush}"
+                                       Margin="0,0,5,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding MessagesLabel}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ToggleButton>
+                </StackPanel>
+                <TextBlock Text="{Binding StatusText}" TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+            </DockPanel>
         </Border>
 
         <ProgressBar DockPanel.Dock="Top" Height="2" IsIndeterminate="True" BorderThickness="0">

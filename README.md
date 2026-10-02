@@ -19,7 +19,7 @@ It replaces the usual round trip through File Explorer, Event Viewer, CMTrace, a
 - **Search across the bundle.** Free text plus `eventid:`, `provider:`, `level:` and `type:` filters; results stream in and open at the matching line or event.
 - **Findings.** Deterministic, evidence-backed checks (application crashes, service terminations, pending reboot, repeated log errors). Each finding lists the events or lines it rests on.
 - **Timeline.** Events and log lines from the whole bundle in time order; Ctrl+T shows the current line or event on it.
-- **Problems panel.** Files that could not be read, were only partly read, have no viewer, are empty, or opened with a caution, each with the reason and a link to the first bad line.
+- **Problems panel.** Files that could not be read, were only partly read, have no viewer, are empty, or opened with a caution, each with the reason and a link to the first bad line. Errors, Warnings and Messages buttons with counts show or hide each severity.
 - **Links everywhere.** Search hits, findings and timeline rows all open the source at the exact place; Back and Forward (Alt+Left / Alt+Right) retrace the steps.
 - **Light, dark or follow Windows.** File > Preferences > Theme; the choice is remembered.
 - **Two independent zoom levels.** Interface zoom (Ctrl + mouse wheel anywhere, Ctrl+plus/minus/0) and document zoom for the log, table, registry, tree and event views only (Ctrl + mouse wheel over a document, Ctrl+Shift+plus/minus/0, or the box in a viewer's status line). Both are 50–300 % and are remembered.

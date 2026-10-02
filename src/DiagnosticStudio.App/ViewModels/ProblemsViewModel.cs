@@ -200,7 +200,10 @@ public sealed partial class ProblemsViewModel : ObservableObject
     /// <summary>Files that could not be fully read, by kind of problem.</summary>
     public ObservableCollection<FileProblemGroupViewModel> FileGroups { get; } = new();
 
-    /// <summary>Everything the panel lists: the finding groups, then the file problem groups.</summary>
+    /// <summary>
+    /// Everything the panel lists: the finding groups, then the file problem groups, leaving out the severities
+    /// switched off with the Errors, Warnings and Messages buttons.
+    /// </summary>
     public ObservableCollection<object> Items { get; } = new();
 
     /// <summary>The most severe findings, for the Overview.</summary>
@@ -223,6 +226,72 @@ public sealed partial class ProblemsViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TabHeader))]
     private int _unreadableFileCount;
+
+    // The three filter buttons. Each counts the findings and the files of its severity, whether or not it is shown.
+    [ObservableProperty]
+    private bool _showErrors = true;
+
+    [ObservableProperty]
+    private bool _showWarnings = true;
+
+    [ObservableProperty]
+    private bool _showMessages = true;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ErrorsLabel))]
+    private int _errorCount;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(WarningsLabel))]
+    private int _warningCount;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MessagesLabel))]
+    private int _messageCount;
+
+    public string ErrorsLabel => Label(ErrorCount, "Error");
+
+    public string WarningsLabel => Label(WarningCount, "Warning");
+
+    public string MessagesLabel => Label(MessageCount, "Message");
+
+    private static string Label(int count, string noun) =>
+        string.Create(CultureInfo.CurrentCulture, $"{count:N0} {noun}{(count == 1 ? string.Empty : "s")}");
+
+    partial void OnShowErrorsChanged(bool value) => RebuildItems();
+
+    partial void OnShowWarningsChanged(bool value) => RebuildItems();
+
+    partial void OnShowMessagesChanged(bool value) => RebuildItems();
+
+    private bool IsShown(FindingSeverity severity) => severity switch
+    {
+        FindingSeverity.Error => ShowErrors,
+        FindingSeverity.Warning => ShowWarnings,
+        _ => ShowMessages,
+    };
+
+    private void RebuildItems()
+    {
+        Items.Clear();
+        foreach (var group in Groups.Where(g => IsShown(g.Severity)))
+        {
+            Items.Add(group);
+        }
+
+        foreach (var group in FileGroups.Where(g => IsShown(g.Severity)))
+        {
+            Items.Add(group);
+        }
+
+        ErrorCount = CountOf(FindingSeverity.Error);
+        WarningCount = CountOf(FindingSeverity.Warning);
+        MessageCount = CountOf(FindingSeverity.Information);
+    }
+
+    private int CountOf(FindingSeverity severity) =>
+        Groups.Where(g => g.Severity == severity).Sum(g => g.Findings.Count)
+        + FileGroups.Where(g => g.Severity == severity).Sum(g => g.Items.Count);
 
     public bool HasFindings => FindingCount > 0;
 
@@ -322,11 +391,7 @@ public sealed partial class ProblemsViewModel : ObservableObject
             _output.Write(OutputSeverity.Warning, "Rules", $"{issue.Subject}: {issue.Message}");
         }
 
-        foreach (var group in Groups)
-        {
-            Items.Add(group);
-        }
-
+        RebuildItems();
         StatusText = Summarise(models, result);
     }
 
@@ -381,8 +446,9 @@ public sealed partial class ProblemsViewModel : ObservableObject
                      .Select(g => new FileProblemGroupViewModel(g.Key, g.Select(p => new FileProblemViewModel(p)))))
         {
             FileGroups.Add(group);
-            Items.Add(group);
         }
+
+        RebuildItems();
 
         UnreadableFileCount = problems.Count(p => p.Kind is FileProblemKind.Failed or FileProblemKind.Partial);
     }
@@ -438,6 +504,9 @@ public sealed partial class ProblemsViewModel : ObservableObject
         Attention.Clear();
         FindingCount = 0;
         UnreadableFileCount = 0;
+        ErrorCount = 0;
+        WarningCount = 0;
+        MessageCount = 0;
         OnPropertyChanged(nameof(HasAttention));
     }
 

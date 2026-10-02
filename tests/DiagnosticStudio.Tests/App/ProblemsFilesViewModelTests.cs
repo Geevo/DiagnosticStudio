@@ -71,6 +71,84 @@ public sealed class ProblemsFilesViewModelTests : IDisposable
     private static ScriptedHealth Returns(params FileProblem[] problems) =>
         new((_, _, _) => Task.FromResult<IReadOnlyList<FileProblem>>(problems));
 
+    // ---- the Errors / Warnings / Messages buttons ----
+
+    [Fact]
+    public async Task The_buttons_count_files_by_severity_and_all_start_on()
+    {
+        var (vm, _, _) = await Create(Returns(
+            P(_a, FileProblemKind.Failed),
+            P(_b, FileProblemKind.Partial),
+            P(_c, FileProblemKind.Caution),
+            P(_d, FileProblemKind.Empty)));
+
+        await vm.PendingEvaluation;
+
+        Assert.True(vm.ShowErrors && vm.ShowWarnings && vm.ShowMessages);
+        Assert.Equal("1 Error", vm.ErrorsLabel);
+        Assert.Equal("1 Warning", vm.WarningsLabel);
+        Assert.Equal("2 Messages", vm.MessagesLabel);
+        Assert.Equal(4, vm.Items.Count);
+    }
+
+    [Fact]
+    public async Task Turning_a_button_off_hides_that_severity_and_on_brings_it_back_in_order()
+    {
+        var (vm, _, _) = await Create(Returns(
+            P(_a, FileProblemKind.Failed),
+            P(_b, FileProblemKind.Partial),
+            P(_d, FileProblemKind.Empty)));
+        await vm.PendingEvaluation;
+
+        vm.ShowWarnings = false;
+        Assert.Equal(new[] { "Files that could not be read (1)", "Empty files (1)" }, vm.Items.Cast<FileProblemGroupViewModel>().Select(g => g.Title));
+
+        vm.ShowErrors = false;
+        vm.ShowMessages = false;
+        Assert.Empty(vm.Items);
+        Assert.Equal("1 Error", vm.ErrorsLabel);   // the counts do not depend on what is shown
+
+        vm.ShowErrors = vm.ShowWarnings = vm.ShowMessages = true;
+        Assert.Equal(3, vm.Items.Count);
+        Assert.Equal("Files that could not be read (1)", ((FileProblemGroupViewModel)vm.Items[0]).Title);
+    }
+
+    [Fact]
+    public async Task Findings_count_and_filter_with_the_files()
+    {
+        var finding = new Finding
+        {
+            Id = "r1",
+            Title = "Crash",
+            Description = "d",
+            Severity = FindingSeverity.Error,
+            Evidence = new[] { new FindingEvidence { Location = DiagnosticLocation.ForArtifact(_a.Id), Description = "e" } },
+        };
+        var (vm, _, _) = await Create(Returns(P(_b, FileProblemKind.Failed)), new FixedFindings { Findings = new[] { finding } });
+        await vm.PendingEvaluation;
+
+        Assert.Equal("2 Errors", vm.ErrorsLabel);
+        Assert.Equal(2, vm.Items.Count);
+
+        vm.ShowErrors = false;
+
+        Assert.Empty(vm.Items);
+        Assert.Equal("2 Errors", vm.ErrorsLabel);
+    }
+
+    [Fact]
+    public async Task A_new_bundle_resets_the_counts()
+    {
+        var (vm, _, workspace) = await Create(Returns(P(_a, FileProblemKind.Failed)));
+        await vm.PendingEvaluation;
+        Assert.Equal("1 Error", vm.ErrorsLabel);
+
+        workspace.Close();
+
+        Assert.Equal("0 Errors", vm.ErrorsLabel);
+        Assert.Equal("0 Messages", vm.MessagesLabel);
+    }
+
     // ---- grouping ----
 
     [Fact]

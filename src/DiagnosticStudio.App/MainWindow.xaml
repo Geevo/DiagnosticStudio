@@ -118,11 +118,13 @@
                 <MenuItem Header="_Close Bundle" Command="{Binding CloseBundleCommand}" />
                 <Separator />
                 <MenuItem Header="_Preferences">
-                    <MenuItem Header="_Theme">
-                        <MenuItem Header="_System" IsCheckable="True" IsChecked="{Binding Theme.IsSystem, Mode=TwoWay}" />
-                        <MenuItem Header="_Dark" IsCheckable="True" IsChecked="{Binding Theme.IsDarkChosen, Mode=TwoWay}" />
-                        <MenuItem Header="_Light" IsCheckable="True" IsChecked="{Binding Theme.IsLight, Mode=TwoWay}" />
-                    </MenuItem>
+                    <!-- A heading, not a submenu: the choices sit directly under it. -->
+                    <!-- Not hit-testable or focusable, so it neither highlights nor closes the menu. -->
+                    <MenuItem Header="Theme" FontWeight="SemiBold" IsHitTestVisible="False" Focusable="False" />
+                    <Separator />
+                    <MenuItem Header="_System" IsCheckable="True" IsChecked="{Binding Theme.IsSystem, Mode=TwoWay}" />
+                    <MenuItem Header="_Dark" IsCheckable="True" IsChecked="{Binding Theme.IsDarkChosen, Mode=TwoWay}" />
+                    <MenuItem Header="_Light" IsCheckable="True" IsChecked="{Binding Theme.IsLight, Mode=TwoWay}" />
                 </MenuItem>
                 <Separator />
                 <MenuItem Header="E_xit" Command="ApplicationCommands.Close" InputGestureText="Alt+F4" />

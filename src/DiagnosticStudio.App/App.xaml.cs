@@ -34,10 +34,9 @@ public partial class App : Application
         MenuDropAlignment.KeepRight();
 
         // Before any window exists, so the first frame is already in the user's light/dark mode.
-        _theme = new ThemeService(this);
-        _theme.Start();
-
         _services = ConfigureServices();
+        _theme = _services.GetRequiredService<ThemeService>();
+        _theme.Start();
 
         // One failed click must not close the application in the middle of an investigation.
         var reporter = new UnhandledExceptionReporter(_services.GetRequiredService<IOutputLog>());
@@ -97,9 +96,8 @@ public partial class App : Application
             // Leave nothing behind if the removal is quick; the next start sweeps whatever is left.
             workspace.PendingCleanup.Wait(TimeSpan.FromSeconds(5));
         }
-        _services?.Dispose();
+        _services?.Dispose();   // also disposes the theme service
         _responsiveness?.Dispose();
-        _theme?.Dispose();
         base.OnExit(e);
     }
 
@@ -156,6 +154,7 @@ public partial class App : Application
         services.AddSingleton<StatusBarViewModel>();
         services.AddSingleton<ZoomViewModel>();
         services.AddSingleton<ContentZoomViewModel>();
+        services.AddSingleton(sp => new ThemeService(Current, sp.GetRequiredService<ISettingsStore>()));
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<MainWindow>();
 

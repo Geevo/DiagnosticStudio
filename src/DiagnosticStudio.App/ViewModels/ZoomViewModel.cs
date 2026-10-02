@@ -113,11 +113,12 @@ public partial class ZoomViewModel : ObservableObject
         OnPropertyChanged(nameof(IsIndicatorVisible));
     }
 
+    // A step goes to the next multiple of ten, so a typed 125 % comes back to 100 % rather than missing it at 105 %.
     [RelayCommand(CanExecute = nameof(CanZoomIn))]
-    private void ZoomIn() => Percent = Clamp(Percent + Step);
+    private void ZoomIn() => Percent = Clamp((Percent / Step + 1) * Step);
 
     [RelayCommand(CanExecute = nameof(CanZoomOut))]
-    private void ZoomOut() => Percent = Clamp(Percent - Step);
+    private void ZoomOut() => Percent = Clamp((Percent + Step - 1) / Step * Step - Step);
 
     [RelayCommand(CanExecute = nameof(IsScaled))]
     private void Reset() => Percent = Normal;

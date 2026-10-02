@@ -166,11 +166,9 @@ public sealed class UiSmokeTests
                     });
                 }
 
-                using var theme = new ThemeService(app);
-                theme.Start();
-
                 var configure = typeof(DiagnosticStudio.App.App).GetMethod("ConfigureServices", BindingFlags.NonPublic | BindingFlags.Static)!;
                 using var services = (ServiceProvider)configure.Invoke(null, null)!;
+                services.GetRequiredService<ThemeService>().Start();
                 var window = services.GetRequiredService<MainWindow>();
                 window.ShowActivated = false;
                 window.ShowInTaskbar = false;

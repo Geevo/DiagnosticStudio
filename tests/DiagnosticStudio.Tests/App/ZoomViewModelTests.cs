@@ -15,6 +15,7 @@ public sealed class ZoomViewModelTests : IDisposable
     {
         public int ZoomPercent { get; set; } = 100;
         public int ContentZoomPercent { get; set; } = 100;
+        public ThemePreference Theme { get; set; } = ThemePreference.System;
         public int Saves { get; private set; }
 
         int ISettingsStore.ZoomPercent
@@ -59,6 +60,35 @@ public sealed class ZoomViewModelTests : IDisposable
 
         zoom.ZoomOutCommand.Execute(null);
         Assert.Equal(110, zoom.Percent);
+    }
+
+    [Theory]
+    [InlineData(125, 130, 120)]
+    [InlineData(95, 100, 90)]
+    [InlineData(100, 110, 90)]
+    [InlineData(299, 300, 290)]
+    [InlineData(51, 60, 50)]
+    public void A_step_goes_to_the_next_multiple_of_ten_so_a_typed_level_reaches_100(int from, int up, int down)
+    {
+        var zoomIn = new ZoomViewModel(new MemorySettings { ZoomPercent = from });
+        zoomIn.ZoomInCommand.Execute(null);
+        Assert.Equal(up, zoomIn.Percent);
+
+        var zoomOut = new ZoomViewModel(new MemorySettings { ZoomPercent = from });
+        zoomOut.ZoomOutCommand.Execute(null);
+        Assert.Equal(down, zoomOut.Percent);
+    }
+
+    [Fact]
+    public void The_wheel_from_a_typed_level_lands_on_100()
+    {
+        var zoom = new ZoomViewModel(new MemorySettings { ZoomPercent = 125 });
+
+        zoom.Wheel(-120);
+        zoom.Wheel(-120);
+        zoom.Wheel(-120);
+
+        Assert.Equal(100, zoom.Percent);
     }
 
     [Fact]
@@ -298,6 +328,18 @@ public sealed class ZoomViewModelTests : IDisposable
         var again = new FileSettingsStore(path);
         Assert.Equal(130, again.ZoomPercent);
         Assert.Equal(175, again.ContentZoomPercent);
+    }
+
+    [Fact]
+    public void The_theme_choice_is_remembered_as_a_word_and_defaults_to_the_system()
+    {
+        var path = Path.Combine(_dir, "theme", "settings.json");
+        Assert.Equal(ThemePreference.System, new FileSettingsStore(path).Theme);
+
+        new FileSettingsStore(path).Theme = ThemePreference.Dark;
+
+        Assert.Equal(ThemePreference.Dark, new FileSettingsStore(path).Theme);
+        Assert.Contains("\"Dark\"", File.ReadAllText(path));
     }
 
     [Fact]

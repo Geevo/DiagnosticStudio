@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace DiagnosticStudio.App.Services;
 
@@ -11,6 +12,9 @@ public interface ISettingsStore
 
     /// <summary>Scale of the document pane alone, in percent; 100 is normal.</summary>
     int ContentZoomPercent { get; set; }
+
+    /// <summary>Whether the application follows Windows or is always light or dark.</summary>
+    ThemePreference Theme { get; set; }
 }
 
 /// <summary>
@@ -24,6 +28,9 @@ public sealed class FileSettingsStore : ISettingsStore
         public int ZoomPercent { get; set; } = 100;
 
         public int ContentZoomPercent { get; set; } = 100;
+
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public ThemePreference Theme { get; set; } = ThemePreference.System;
     }
 
     private readonly string _path;
@@ -66,6 +73,21 @@ public sealed class FileSettingsStore : ISettingsStore
             }
 
             _data.ContentZoomPercent = value;
+            Save();
+        }
+    }
+
+    public ThemePreference Theme
+    {
+        get => _data.Theme;
+        set
+        {
+            if (_data.Theme == value)
+            {
+                return;
+            }
+
+            _data.Theme = value;
             Save();
         }
     }

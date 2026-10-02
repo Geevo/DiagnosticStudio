@@ -113,6 +113,14 @@
                 <MenuItem Header="Open _Folder..." InputGestureText="Ctrl+Shift+O" Command="{Binding OpenFolderCommand}" />
                 <MenuItem Header="_Close Bundle" Command="{Binding CloseBundleCommand}" />
                 <Separator />
+                <MenuItem Header="_Preferences">
+                    <MenuItem Header="_Theme">
+                        <MenuItem Header="_System" IsCheckable="True" IsChecked="{Binding Theme.IsSystem, Mode=TwoWay}" />
+                        <MenuItem Header="_Dark" IsCheckable="True" IsChecked="{Binding Theme.IsDarkChosen, Mode=TwoWay}" />
+                        <MenuItem Header="_Light" IsCheckable="True" IsChecked="{Binding Theme.IsLight, Mode=TwoWay}" />
+                    </MenuItem>
+                </MenuItem>
+                <Separator />
                 <MenuItem Header="E_xit" Command="ApplicationCommands.Close" InputGestureText="Alt+F4" />
             </MenuItem>
             <MenuItem Header="_View">

@@ -72,7 +72,9 @@
     </UserControl.Resources>
 
     <!-- A list of common levels that also takes a typed one, like the zoom box of a code editor. -->
+    <!-- The box has its own style, so the theme's text colour does not reach it unless it is taken from the window. -->
     <ComboBox x:Name="Box" Style="{StaticResource ZoomCombo}"
+              Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Window}}"
               ItemsSource="{x:Static vm:ZoomViewModel.Presets}"
               Text="{Binding Entry, Mode=OneWay}"
               ToolTip="Zoom of the document pane. Type a level and press Enter, or Ctrl+mouse wheel over a document."

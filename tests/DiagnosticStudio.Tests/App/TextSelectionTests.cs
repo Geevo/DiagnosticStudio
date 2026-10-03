@@ -90,19 +90,23 @@ public class TextSelectionTests
     // ---- the viewer ----
 
     [Fact]
-    public void Marking_text_is_the_default_and_whole_line_selection_is_a_choice()
+    public void Whole_line_selection_is_the_default_and_marking_text_is_a_choice()
     {
         var vm = Viewer("a", "b");
 
-        Assert.True(vm.FreeSelection);
-        Assert.False(vm.LineSelection);
+        Assert.True(vm.LineSelection);
+        Assert.False(vm.FreeSelection);
         Assert.False(vm.HasTextSelection);
+
+        vm.LineSelection = false;
+        Assert.True(vm.FreeSelection);
     }
 
     [Fact]
     public void Switching_to_whole_lines_puts_the_marked_text_away()
     {
         var vm = Viewer("hello world");
+        vm.LineSelection = false;
         vm.Select(P(1, 0), P(1, 5));
         Assert.True(vm.HasTextSelection);
         var changed = new List<string?>();

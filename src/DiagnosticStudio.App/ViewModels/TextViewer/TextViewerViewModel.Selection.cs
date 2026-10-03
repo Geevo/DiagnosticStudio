@@ -10,12 +10,12 @@ public sealed partial class TextViewerViewModel
     private const int ReadChunk = 2_000;
     private const int CountCharactersUpToLines = 5_000;
 
-    /// <summary>Select whole lines (the list's own selection) instead of text.</summary>
+    /// <summary>Select whole lines (the list's own selection) instead of text; the default.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(FreeSelection))]
-    private bool _lineSelection;
+    private bool _lineSelection = true;
 
-    /// <summary>Marking text with the mouse; the default.</summary>
+    /// <summary>Marking text with the mouse, when whole-line selection is switched off.</summary>
     public bool FreeSelection => !LineSelection;
 
     /// <summary>The marked text, or <see cref="LogSelection.None"/>.</summary>

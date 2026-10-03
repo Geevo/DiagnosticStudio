@@ -17,7 +17,6 @@ namespace DiagnosticStudio.App.Services;
 public sealed class StallProbe : IDisposable
 {
     private static readonly TimeSpan SampleInterval = TimeSpan.FromMilliseconds(250);
-    private static readonly long LateAfterTicks = Stopwatch.Frequency * 7 / 10;
     private static readonly ConcurrentDictionary<Assembly, bool> OwnAssemblies = new();
 
     // The most recent exceptions, with when and where. A stall is described from the ones inside it.
@@ -28,12 +27,15 @@ public sealed class StallProbe : IDisposable
 
     private sealed record Thrown(long Ticks, string Site);
 
-    private readonly uint _uiThreadId = GetCurrentThreadId();
+    private readonly IStallSource _source;
+    private readonly TimeProvider _clock;
+    private readonly long _lateAfterTicks;
     private readonly object _gate = new();
-    private readonly Timer _timer;
+    private readonly ITimer _timer;
+    private readonly EventHandler<System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs> _onException;
     private readonly Dictionary<string, int> _waits = new(StringComparer.Ordinal);
     private readonly Thrown?[] _ring = new Thrown?[RingSize];
-    private long _lastBeat = Stopwatch.GetTimestamp();
+    private long _lastBeat;
     private long _exceptions;
     private bool _inStall;
     private int _samples;
@@ -46,10 +48,21 @@ public sealed class StallProbe : IDisposable
 
     /// <param name="counts">Which exceptions to count; all of them when <c>null</c>.</param>
     public StallProbe(Func<Exception, bool>? counts = null)
+        : this(new ProcessStallSource(GetCurrentThreadId()), TimeProvider.System, counts)
     {
+    }
+
+    /// <summary>For tests, which supply the readings and move time by hand.</summary>
+    internal StallProbe(IStallSource source, TimeProvider clock, Func<Exception, bool>? counts = null)
+    {
+        _source = source;
+        _clock = clock;
         _counts = counts;
-        AppDomain.CurrentDomain.FirstChanceException += (_, e) => Record(e.Exception);
-        _timer = new Timer(_ => Sample(), null, SampleInterval, SampleInterval);
+        _lateAfterTicks = clock.TimestampFrequency * 7 / 10;
+        _lastBeat = clock.GetTimestamp();
+        _onException = (_, e) => Record(e.Exception);
+        AppDomain.CurrentDomain.FirstChanceException += _onException;
+        _timer = clock.CreateTimer(_ => Sample(), null, SampleInterval, SampleInterval);
     }
 
     [DllImport("kernel32.dll")]
@@ -61,7 +74,7 @@ public sealed class StallProbe : IDisposable
         lock (_gate)
         {
             var stallStart = _lastBeat;
-            _lastBeat = Stopwatch.GetTimestamp();
+            _lastBeat = _clock.GetTimestamp();
             if (!_inStall)
             {
                 return null;
@@ -82,7 +95,7 @@ public sealed class StallProbe : IDisposable
 
         var count = Interlocked.Increment(ref _exceptions);
         var site = count <= RecordLimit ? SiteOf(exception) : exception.GetType().Name;
-        _ring[(int)((count - 1) % RingSize)] = new Thrown(Stopwatch.GetTimestamp(), site);
+        _ring[(int)((count - 1) % RingSize)] = new Thrown(_clock.GetTimestamp(), site);
     }
 
     /// <summary>The exception type and the application code that was running when it was thrown.</summary>
@@ -141,13 +154,12 @@ public sealed class StallProbe : IDisposable
         {
             lock (_gate)
             {
-                if (Stopwatch.GetTimestamp() - _lastBeat < LateAfterTicks)
+                if (_clock.GetTimestamp() - _lastBeat < _lateAfterTicks)
                 {
                     return;
                 }
 
-                using var process = Process.GetCurrentProcess();
-                var ui = FindUiThread(process);
+                var ui = _source.UiThread();
                 if (!_inStall)
                 {
                     _inStall = true;
@@ -155,8 +167,8 @@ public sealed class StallProbe : IDisposable
                     _runningSamples = 0;
                     _waits.Clear();
                     _exceptionsAtStart = Interlocked.Read(ref _exceptions);
-                    _uiCpuAtStart = ui is null ? TimeSpan.Zero : SafeCpu(ui);
-                    _processCpuAtStart = process.TotalProcessorTime;
+                    _uiCpuAtStart = ui?.Cpu ?? TimeSpan.Zero;
+                    _processCpuAtStart = _source.ProcessCpu();
                 }
 
                 _samples++;
@@ -165,9 +177,9 @@ public sealed class StallProbe : IDisposable
                     return;
                 }
 
-                if (ui.ThreadState == System.Diagnostics.ThreadState.Wait)
+                if (ui.Value.Waiting)
                 {
-                    var reason = ui.WaitReason.ToString();
+                    var reason = ui.Value.WaitReason;
                     _waits[reason] = _waits.GetValueOrDefault(reason) + 1;
                 }
                 else
@@ -182,40 +194,14 @@ public sealed class StallProbe : IDisposable
         }
     }
 
-    private ProcessThread? FindUiThread(Process process)
-    {
-        foreach (ProcessThread thread in process.Threads)
-        {
-            if ((uint)thread.Id == _uiThreadId)
-            {
-                return thread;
-            }
-        }
-
-        return null;
-    }
-
-    private static TimeSpan SafeCpu(ProcessThread thread)
-    {
-        try
-        {
-            return thread.TotalProcessorTime;
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
-        {
-            return TimeSpan.Zero;
-        }
-    }
-
     private string Describe(long stallStart)
     {
         var culture = CultureInfo.CurrentCulture;
         var parts = new List<string>();
-        using var process = Process.GetCurrentProcess();
-        var ui = FindUiThread(process);
+        var ui = _source.UiThread();
         if (ui is not null && _samples > 0)
         {
-            var uiCpu = SafeCpu(ui) - _uiCpuAtStart;
+            var uiCpu = ui.Value.Cpu - _uiCpuAtStart;
             if (_runningSamples * 2 >= _samples)
             {
                 parts.Add(string.Create(culture, $"the interface thread was working for {uiCpu.TotalSeconds:0.0} s of it"));
@@ -240,7 +226,7 @@ public sealed class StallProbe : IDisposable
                 + (Debugger.IsAttached ? " with a debugger attached, which makes each one slow" : string.Empty));
         }
 
-        var others = process.TotalProcessorTime - _processCpuAtStart - (ui is null ? TimeSpan.Zero : SafeCpu(ui) - _uiCpuAtStart);
+        var others = _source.ProcessCpu() - _processCpuAtStart - (ui is null ? TimeSpan.Zero : ui.Value.Cpu - _uiCpuAtStart);
         if (others > TimeSpan.FromSeconds(1))
         {
             parts.Add(string.Create(culture, $"other threads used {others.TotalSeconds:0.0} s of processor time"));
@@ -249,5 +235,64 @@ public sealed class StallProbe : IDisposable
         return parts.Count == 0 ? string.Empty : "Seen: " + string.Join("; ", parts) + ".";
     }
 
-    public void Dispose() => _timer.Dispose();
+    public void Dispose()
+    {
+        AppDomain.CurrentDomain.FirstChanceException -= _onException;
+        _timer.Dispose();
+    }
+}
+
+/// <summary>What the interface thread was doing at one sample.</summary>
+internal readonly record struct UiThreadState(bool Waiting, string WaitReason, TimeSpan Cpu);
+
+/// <summary>The readings a stall is described from, apart from time and exceptions.</summary>
+internal interface IStallSource
+{
+    /// <summary>The interface thread's state now, or <c>null</c> when it cannot be found.</summary>
+    UiThreadState? UiThread();
+
+    /// <summary>Processor time used by the whole process so far.</summary>
+    TimeSpan ProcessCpu();
+}
+
+internal sealed class ProcessStallSource : IStallSource
+{
+    private readonly uint _uiThreadId;
+
+    public ProcessStallSource(uint uiThreadId) => _uiThreadId = uiThreadId;
+
+    public UiThreadState? UiThread()
+    {
+        using var process = Process.GetCurrentProcess();
+        foreach (ProcessThread thread in process.Threads)
+        {
+            if ((uint)thread.Id != _uiThreadId)
+            {
+                continue;
+            }
+
+            var waiting = thread.ThreadState == System.Diagnostics.ThreadState.Wait;
+            return new UiThreadState(waiting, waiting ? thread.WaitReason.ToString() : string.Empty, SafeCpu(thread));
+        }
+
+        return null;
+    }
+
+    public TimeSpan ProcessCpu()
+    {
+        using var process = Process.GetCurrentProcess();
+        return process.TotalProcessorTime;
+    }
+
+    private static TimeSpan SafeCpu(ProcessThread thread)
+    {
+        try
+        {
+            return thread.TotalProcessorTime;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            return TimeSpan.Zero;
+        }
+    }
 }

@@ -80,6 +80,7 @@ public sealed partial class RulesDocumentViewModel : DocumentViewModel
         }
 
         Selected = Rules.FirstOrDefault();
+        ShowHelp = Rules.Count == 0;
         if (problem is not null)
         {
             _statusText = problem;
@@ -103,7 +104,13 @@ public sealed partial class RulesDocumentViewModel : DocumentViewModel
 
     public string HowItWorks => CustomRuleHelp.HowItWorks;
 
-    public string Tips => CustomRuleHelp.Tips;
+    public IReadOnlyList<HelpSection> TipSections => CustomRuleHelp.TipSections;
+
+    /// <summary>Whether the help column is shown; on a small screen the editor can have the room instead.</summary>
+    [ObservableProperty]
+    private bool _showHelp;
+
+    private bool _preferAdvanced;
 
     public IReadOnlyList<RuleExample> Examples => CustomRuleHelp.Examples;
 
@@ -302,6 +309,33 @@ public sealed partial class RulesDocumentViewModel : DocumentViewModel
     partial void OnTestSummaryChanged(string value) => OnPropertyChanged(nameof(HasTestResult));
 
     partial void OnSelectedChanged(RuleItemViewModel? value) => ClearTest();
+
+    partial void OnSelectedChanged(RuleItemViewModel? oldValue, RuleItemViewModel? newValue)
+    {
+        if (oldValue is not null)
+        {
+            oldValue.PropertyChanged -= OnSelectedRuleChanged;
+        }
+
+        if (newValue is not null)
+        {
+            // Someone who switched the advanced view on wants it for the next rule as well.
+            if (_preferAdvanced)
+            {
+                newValue.ShowAdvanced = true;
+            }
+
+            newValue.PropertyChanged += OnSelectedRuleChanged;
+        }
+    }
+
+    private void OnSelectedRuleChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(RuleItemViewModel.ShowAdvanced) && sender is RuleItemViewModel rule)
+        {
+            _preferAdvanced = rule.ShowAdvanced;
+        }
+    }
 
     private void ClearTest()
     {

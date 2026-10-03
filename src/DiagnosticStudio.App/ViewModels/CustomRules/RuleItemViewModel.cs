@@ -44,10 +44,8 @@ public sealed partial class RuleItemViewModel : ObservableObject
         _minMatches = rule.MinMatches.ToString(CultureInfo.InvariantCulture);
         _windowMinutes = rule.WindowMinutes.ToString(CultureInfo.InvariantCulture);
 
-        // The extra options start open when the rule already uses one, so nothing it does is hidden.
-        _moreLookOpen = _excludeFile.Length + _excludeProvider.Length + _excludeEventIds.Length + _notContains.Length
-            + _notRegex.Length + _dataField.Length + _after.Length + _before.Length > 0 || _matchCase || _regex.Length > 0;
-        _moreReportOpen = _trigger != CustomRuleTrigger.Count;
+        // The advanced view starts on when the rule already uses one of its settings, so nothing it does is hidden.
+        _showAdvanced = UsesAdvancedSettings;
         Revalidate();
     }
 
@@ -162,17 +160,26 @@ public sealed partial class RuleItemViewModel : ObservableObject
     [ObservableProperty]
     private string _before;
 
-    /// <summary>Whether the extra look-at options are open in the editor.</summary>
+    /// <summary>Whether the editor shows the less common settings as well as the everyday ones.</summary>
     [ObservableProperty]
-    private bool _moreLookOpen;
-
-    /// <summary>Whether the extra report options (grouping, when to report) are open in the editor.</summary>
-    [ObservableProperty]
-    private bool _moreReportOpen;
+    [NotifyPropertyChangedFor(nameof(HasHiddenAdvanced))]
+    private bool _showAdvanced;
 
     /// <summary>Why the rule cannot run as it stands; empty when it can.</summary>
     [ObservableProperty]
     private string _validation = string.Empty;
+
+    /// <summary>True when the rule sets something that only the advanced view shows.</summary>
+    public bool UsesAdvancedSettings =>
+        Levels.Length + NotContains.Length + Regex.Length + NotRegex.Length + ExcludeFile.Length + ExcludeProvider.Length
+        + ExcludeEventIds.Length + DataField.Length + After.Length + Before.Length + Title.Length > 0
+        || MatchCase
+        || GroupBy != CustomRuleGrouping.All
+        || Trigger != CustomRuleTrigger.Count
+        || MinMatches.Trim() != "1";
+
+    /// <summary>The advanced view is off but the rule still uses a setting from it; the editor says so.</summary>
+    public bool HasHiddenAdvanced => !ShowAdvanced && UsesAdvancedSettings;
 
     public bool IsEventRule => Kind == CustomRuleKind.Event;
 
@@ -207,10 +214,11 @@ public sealed partial class RuleItemViewModel : ObservableObject
             OnPropertyChanged(nameof(DisplayName));
         }
 
-        if (e.PropertyName is not (nameof(Validation) or nameof(DisplayName) or nameof(MoreLookOpen) or nameof(MoreReportOpen)
+        if (e.PropertyName is not (nameof(Validation) or nameof(DisplayName) or nameof(ShowAdvanced) or nameof(HasHiddenAdvanced)
             or nameof(UsesWindow) or nameof(UsesGrouping) or nameof(MinMatchesLabel) or nameof(WindowLabel)
             or nameof(IsEventRule) or nameof(IsLineRule)))
         {
+            OnPropertyChanged(nameof(HasHiddenAdvanced));
             Revalidate();
             Edited?.Invoke(this, EventArgs.Empty);
         }

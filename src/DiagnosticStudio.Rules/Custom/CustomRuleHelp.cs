@@ -2,6 +2,9 @@ using System.Globalization;
 
 namespace DiagnosticStudio.Rules.Custom;
 
+/// <summary>A titled piece of help that the editor can fold away.</summary>
+public sealed record HelpSection(string Title, string Body, bool Code = false);
+
 /// <summary>A ready-made rule, with what it is for, that the user can add and change.</summary>
 public sealed record RuleExample(string Name, string Purpose, CustomRule Rule)
 {
@@ -18,33 +21,65 @@ public static class CustomRuleHelp
         "2. WHAT TO REPORT: a severity, and optionally a title, grouping and when a group counts.",
         "3. Tick Enabled and Save to run it on every archive or folder you open. Test runs it now, without saving.");
 
-    /// <summary>Short notes on the boxes, and a regular expression cheat sheet.</summary>
-    public static readonly string Tips = Lines(
-        "NAMES AND LISTS",
-        "File names and providers take several patterns separated by commas. * stands for any text and ? for one character, for example  *.log, app-?.txt  or  Microsoft-Windows-*. Case never matters here.",
-        "Event ids are numbers separated by commas, for example  41, 6008.",
-        "",
-        "TEXT",
-        "Contains looks for plain text. Must not contain throws out matches that also have that text. For an event the text is its message, or its data when it has no message. Tick Match case to tell upper from lower case; otherwise they are treated alike.",
-        "To look at one value of an event instead of the whole message, give its name in Data item (for example  LogonType  or  TargetUserName).",
-        "",
-        "REGULAR EXPRESSIONS (the advanced way to describe text)",
-        "  .        any character              \\d  a digit              \\s  a space or tab",
-        "  \\b       the edge of a word         ^   start of the text    $   end of the text",
-        "  a|b      a or b                     (a|b)  a group           x?  x or nothing",
-        "  x*       x any number of times      x+  x one or more        x{3}  x exactly 3 times",
-        "  [0-9a-f] one character from a set   [^0-9]  anything but a digit",
-        "  (?<key>\\d+)  a named group; with Group by 'a captured value' each distinct value gets its own finding",
-        "Use \\ before a character that means something, such as \\. for a full stop. Examples:  error code (?<key>0x[0-9a-f]+)   or   \\bfail(ed|ure)?\\b",
-        "",
-        "WHEN TO REPORT",
-        "At least N matches: report a group once it has N matches.",
-        "A burst: N matches within a number of minutes of each other, for example 5 failed sign-ins in 10 minutes.",
-        "A silence: two matches in a row further apart than a number of minutes, for example nothing logged for 2 hours. Needs lines or events with a time.",
-        "Too few matches in a file: report a file that has fewer than N matches (so N = 1 reports a file with none). Say which files in 'In files named'.",
-        "",
-        "TITLES",
-        "Leave the title blank for a sensible one, or use {Name} {Count} {Key} {File} {Provider} {EventId} {Text} {Time} {From} {To} {Minutes}. {From} and {To} are the first and last time. {Minutes} is how long a burst or a silence lasted.");
+    /// <summary>Short notes on the boxes, and a regular expression cheat sheet, as sections the editor folds away.</summary>
+    public static IReadOnlyList<HelpSection> TipSections { get; } = new[]
+    {
+        new HelpSection(
+            "Names and lists",
+            Lines(
+                "File names and providers take several patterns separated by commas.",
+                "* stands for any text and ? for one character, for example  *.log, app-?.txt  or  Microsoft-Windows-*. Case never matters here.",
+                "Event ids are numbers separated by commas, for example  41, 6008.")),
+        new HelpSection(
+            "Text",
+            Lines(
+                "Contains looks for plain text. Must not contain throws out matches that also have that text.",
+                "For an event the text is its message, or its data when it has no message.",
+                "Tick Match case to tell upper from lower case; otherwise they are treated alike.",
+                "To look at one value of an event instead of the whole message, give its name in Data item (for example  LogonType  or  TargetUserName).")),
+        new HelpSection(
+            "Regular expressions",
+            Lines(
+                "A regular expression describes text by its shape.",
+                "",
+                "  .          any character",
+                "  \\d         a digit",
+                "  \\s         a space or tab",
+                "  \\b         the edge of a word",
+                "  ^   $      start, end of the text",
+                "  a|b        a or b",
+                "  (a|b)      a group",
+                "  x?         x or nothing",
+                "  x*         x any number of times",
+                "  x+         x one or more times",
+                "  x{3}       x exactly 3 times",
+                "  [0-9a-f]   one character from a set",
+                "  [^0-9]     anything but a digit",
+                "",
+                "A named group, like  (?<key>\\d+), is for 'one finding for each captured value': each distinct value gets its own finding.",
+                "",
+                "Use \\ before a character that means something, such as \\. for a full stop.",
+                "Examples:",
+                "  error code (?<key>0x[0-9a-f]+)",
+                "  \\bfail(ed|ure)?\\b"),
+                true),
+        new HelpSection(
+            "When to report",
+            Lines(
+                "At least N matches: report a group once it has N matches.",
+                "A burst: N matches within a number of minutes of each other, for example 5 failed sign-ins in 10 minutes.",
+                "A silence: two matches in a row further apart than a number of minutes, for example nothing logged for 2 hours. Needs lines or events with a time.",
+                "Too few matches in a file: report a file that has fewer than N matches (so N = 1 reports a file with none). Say which files in 'In files named'.")),
+        new HelpSection(
+            "Titles",
+            Lines(
+                "Leave the title blank for a sensible one, or use {Name} {Count} {Key} {File} {Provider} {EventId} {Text} {Time} {From} {To} {Minutes}.",
+                "{From} and {To} are the first and last time. {Minutes} is how long a burst or a silence lasted.")),
+    };
+
+    /// <summary>All the tips as one text.</summary>
+    public static string Tips => string.Join(Environment.NewLine + Environment.NewLine,
+        TipSections.Select(t => t.Title.ToUpperInvariant() + Environment.NewLine + t.Body));
 
     /// <summary>The examples offered beside the editor.</summary>
     public static IReadOnlyList<RuleExample> Examples { get; } = new[]

@@ -142,20 +142,27 @@ public sealed partial class TextViewerViewModel
         }
 
         var text = new StringBuilder();
+        var any = false;
         for (var from = start.Line; from <= last; from += ReadChunk)
         {
             var batch = Source.ReadLines(from - 1, Math.Min(ReadChunk, last - from + 1));
             for (var i = 0; i < batch.Count; i++)
             {
                 var number = from + i;
+                if (!Lines.IsShown(number))
+                {
+                    continue; // a line the filter hides is not part of what is on screen
+                }
+
                 var line = batch[i];
                 var s = number == start.Line ? Math.Clamp(start.Column, 0, line.Length) : 0;
                 var e = number == end.Line ? Math.Clamp(end.Column, 0, line.Length) : line.Length;
-                if (number > start.Line)
+                if (any)
                 {
                     text.Append(Environment.NewLine);
                 }
 
+                any = true;
                 text.Append(line, s, Math.Max(0, e - s));
             }
         }

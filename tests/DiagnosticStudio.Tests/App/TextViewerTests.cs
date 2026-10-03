@@ -260,6 +260,99 @@ public sealed class TextViewerTests : IDisposable
         Assert.Equal(0, vm.CurrentLine);
     }
 
+    // ---- Filter ----
+
+    private static async Task Filter(TextViewerViewModel vm, string text)
+    {
+        vm.FilterText = text;
+        await vm.PendingFilter;
+    }
+
+    private TextViewerViewModel NeedleEveryTenth() =>
+        new(Source(Numbered(100, i => i % 10 == 0 ? $"needle {i}" : $"hay {i}")));
+
+    [Fact]
+    public async Task Filter_shows_only_the_matching_lines_with_their_real_numbers()
+    {
+        var vm = NeedleEveryTenth();
+
+        await Filter(vm, "NEEDLE");
+
+        Assert.Equal(10, vm.Lines.Count);
+        Assert.Equal(10, vm.Lines[0].LineNumber);
+        Assert.Equal("needle 100", vm.Lines[9].Text);
+        Assert.Contains("10 of 100", vm.FilterStatus);
+        Assert.Equal(1, vm.Lines.PositionOfLine(20) - vm.Lines.PositionOfLine(10));
+        Assert.Equal(-1, vm.Lines.PositionOfLine(11));
+    }
+
+    [Fact]
+    public async Task Clearing_the_filter_shows_every_line_again()
+    {
+        var vm = NeedleEveryTenth();
+        await Filter(vm, "needle");
+
+        await Filter(vm, string.Empty);
+
+        Assert.Equal(100, vm.Lines.Count);
+        Assert.False(vm.Lines.IsFiltered);
+        Assert.Equal(string.Empty, vm.FilterStatus);
+    }
+
+    [Fact]
+    public async Task Find_steps_only_through_the_lines_the_filter_shows()
+    {
+        var vm = NeedleEveryTenth();
+        await Find(vm, "5");
+        await Filter(vm, "needle");
+
+        vm.FindNextCommand.Execute(null);
+
+        Assert.Equal(50, vm.CurrentLine);
+        Assert.Equal("1 of 1", vm.SearchStatus);
+    }
+
+    [Fact]
+    public async Task Go_to_line_clears_a_filter_that_hides_the_line()
+    {
+        var vm = NeedleEveryTenth();
+        await Filter(vm, "needle");
+
+        vm.GoToLineText = "7";
+        vm.GoToLineCommand.Execute(null);
+
+        Assert.Equal(string.Empty, vm.FilterText);
+        Assert.Equal(100, vm.Lines.Count);
+        Assert.Equal(7, vm.CurrentLine);
+    }
+
+    [Fact]
+    public async Task Go_to_line_keeps_the_filter_when_the_line_is_shown()
+    {
+        var vm = NeedleEveryTenth();
+        await Filter(vm, "needle");
+
+        vm.GoToLineText = "30";
+        vm.GoToLineCommand.Execute(null);
+
+        Assert.Equal("needle", vm.FilterText);
+        Assert.Equal(10, vm.Lines.Count);
+        Assert.Equal(30, vm.CurrentLine);
+    }
+
+    [Fact]
+    public async Task Marked_text_leaves_out_the_lines_the_filter_hides()
+    {
+        var vm = NeedleEveryTenth();
+        await Filter(vm, "needle");
+
+        vm.SelectAll();
+
+        var lines = vm.SelectedText(out _).Split(Environment.NewLine);
+        Assert.Equal(10, lines.Length);
+        Assert.All(lines, l => Assert.StartsWith("needle", l));
+    }
+
     // ---- Copy / info ----
 
     [Fact]

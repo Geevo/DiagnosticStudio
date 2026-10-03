@@ -77,38 +77,51 @@
         <!-- Find / go to line / options -->
         <Border DockPanel.Dock="Top" Background="{DynamicResource PanelBrush}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="6,4">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="Find" VerticalAlignment="Center" Margin="0,0,6,0" />
-                <TextBox x:Name="FindBox" Width="220" VerticalContentAlignment="Center"
-                         Text="{Binding FindText, UpdateSourceTrigger=PropertyChanged}"
-                         ToolTip="Find in this file (Ctrl+F). Enter: next, Shift+Enter: previous"
-                         KeyDown="OnFindBoxKeyDown" />
-                <ToggleButton Content="Aa" Margin="4,0,0,0" Padding="6,2" IsChecked="{Binding MatchCase}"
-                              ToolTip="Match case" />
-                <Button Margin="4,0,0,0" Padding="6,2" Command="{Binding FindPreviousCommand}" ToolTip="Previous match (Shift+F3)"
-                        FontFamily="{StaticResource IconFont}" Content="&#xE70E;" />
-                <Button Margin="2,0,0,0" Padding="6,2" Command="{Binding FindNextCommand}" ToolTip="Next match (F3)"
-                        FontFamily="{StaticResource IconFont}" Content="&#xE70D;" />
-                <TextBlock Text="{Binding SearchStatus}" VerticalAlignment="Center" Margin="8,0,0,0" MinWidth="90"
-                           Foreground="{DynamicResource MutedTextBrush}" />
+            <!-- The groups wrap as units when the window is narrow. -->
+            <WrapPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
+                    <TextBlock Text="Filter" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBox x:Name="FilterBox" Width="200" VerticalContentAlignment="Center"
+                             Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
+                             ToolTip="Show only the lines that contain this text (Ctrl+L). Escape clears it."
+                             KeyDown="OnFilterBoxKeyDown" />
+                    <TextBlock Text="{Binding FilterStatus}" VerticalAlignment="Center" Margin="8,0,0,0" MinWidth="70"
+                               Foreground="{DynamicResource MutedTextBrush}" />
+                </StackPanel>
 
-                <Separator Margin="8,0" />
+                <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
+                    <TextBlock Text="Find" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBox x:Name="FindBox" Width="200" VerticalContentAlignment="Center"
+                             Text="{Binding FindText, UpdateSourceTrigger=PropertyChanged}"
+                             ToolTip="Find in this file (Ctrl+F). Enter or F3: next, Shift+Enter or Shift+F3: previous"
+                             KeyDown="OnFindBoxKeyDown" />
+                    <ToggleButton Content="Aa" Margin="4,0,0,0" Padding="6,2" IsChecked="{Binding MatchCase}"
+                                  ToolTip="Match case" />
+                    <Button Margin="4,0,0,0" Padding="6,2" Command="{Binding FindPreviousCommand}" ToolTip="Previous match (Shift+F3)"
+                            FontFamily="{StaticResource IconFont}" Content="&#xE70E;" />
+                    <Button Margin="2,0,0,0" Padding="6,2" Command="{Binding FindNextCommand}" ToolTip="Next match (F3)"
+                            FontFamily="{StaticResource IconFont}" Content="&#xE70D;" />
+                    <TextBlock Text="{Binding SearchStatus}" VerticalAlignment="Center" Margin="8,0,0,0" MinWidth="90"
+                               Foreground="{DynamicResource MutedTextBrush}" />
+                </StackPanel>
 
-                <TextBlock Text="Line" VerticalAlignment="Center" Margin="0,0,6,0" />
-                <TextBox x:Name="GoToBox" Width="80" VerticalContentAlignment="Center"
-                         Text="{Binding GoToLineText, UpdateSourceTrigger=PropertyChanged}"
-                         ToolTip="Go to line (Ctrl+G)" KeyDown="OnGoToBoxKeyDown" />
-                <Button Content="Go" Margin="4,0,0,0" Padding="8,2" Command="{Binding GoToLineCommand}" />
-                <TextBlock Text="{Binding GoToLineError}" Foreground="{DynamicResource ErrorTextBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
+                    <TextBlock Text="Line" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBox x:Name="GoToBox" Width="80" VerticalContentAlignment="Center"
+                             Text="{Binding GoToLineText, UpdateSourceTrigger=PropertyChanged}"
+                             ToolTip="Go to line (Ctrl+G)" KeyDown="OnGoToBoxKeyDown" />
+                    <Button Content="Go" Margin="4,0,0,0" Padding="8,2" Command="{Binding GoToLineCommand}" />
+                    <TextBlock Text="{Binding GoToLineError}" Foreground="{DynamicResource ErrorTextBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </StackPanel>
 
-                <Separator Margin="8,0" />
-
-                <CheckBox Content="Wrap" IsChecked="{Binding WrapText}" VerticalAlignment="Center" ToolTip="Word wrap" />
-                <ToggleButton Content="Lines" Margin="10,0,0,0" Padding="8,2" IsChecked="{Binding LineSelection}"
-                              ToolTip="Select whole lines instead of text. Off: drag across text to mark any part of it; double-click selects a word, triple-click or the line number a line." />
-                <Button Content="Copy" Margin="4,0,0,0" Padding="8,2" Command="ApplicationCommands.Copy"
-                        CommandTarget="{Binding ElementName=LineList}" ToolTip="Copy the selection (Ctrl+C)" />
-            </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <CheckBox Content="Wrap" IsChecked="{Binding WrapText}" VerticalAlignment="Center" ToolTip="Word wrap" />
+                    <ToggleButton Content="Lines" Margin="10,0,0,0" Padding="8,2" IsChecked="{Binding LineSelection}"
+                                  ToolTip="Select whole lines instead of text. Off: drag across text to mark any part of it; double-click selects a word, triple-click or the line number a line." />
+                    <Button Content="Copy" Margin="4,0,0,0" Padding="8,2" Command="ApplicationCommands.Copy"
+                            CommandTarget="{Binding ElementName=LineList}" ToolTip="Copy the selection (Ctrl+C)" />
+                </StackPanel>
+            </WrapPanel>
         </Border>
 
         <Border DockPanel.Dock="Bottom" Background="{DynamicResource PanelBrush}"

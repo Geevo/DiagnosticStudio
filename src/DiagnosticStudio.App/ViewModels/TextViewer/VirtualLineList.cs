@@ -13,16 +13,22 @@ public sealed class VirtualLineList : IList, IReadOnlyList<LineViewModel>
     private const int MaxCachedPages = 48;
 
     private readonly ITextLineSource _source;
+    private readonly int[]? _view;
     private readonly Dictionary<int, LineViewModel[]> _pages = new();
     private readonly LinkedList<int> _recentPages = new();
     private int[] _matchLines = Array.Empty<int>();
 
-    public VirtualLineList(ITextLineSource source)
+    /// <param name="view">Ascending one-based numbers of the lines to show, or <c>null</c> for every line.</param>
+    public VirtualLineList(ITextLineSource source, int[]? view = null)
     {
         _source = source;
+        _view = view;
     }
 
-    public int Count => _source.LineCount;
+    public int Count => _view?.Length ?? _source.LineCount;
+
+    /// <summary>True when only some of the lines are shown.</summary>
+    public bool IsFiltered => _view is not null;
 
     public LineViewModel this[int index]
     {
@@ -37,6 +43,23 @@ public sealed class VirtualLineList : IList, IReadOnlyList<LineViewModel>
             return page[index % PageSize];
         }
     }
+
+    /// <summary>Place in this list of a line (one-based), or -1 when the filter hides it or it is outside the file.</summary>
+    public int PositionOfLine(int line)
+    {
+        if (_view is null)
+        {
+            return line >= 1 && line <= _source.LineCount ? line - 1 : -1;
+        }
+
+        var at = Array.BinarySearch(_view, line);
+        return at >= 0 ? at : -1;
+    }
+
+    /// <summary>True when the line (one-based) is shown by this list.</summary>
+    public bool IsShown(int line) => PositionOfLine(line) >= 0;
+
+    private int LineAt(int position) => _view is null ? position + 1 : _view[position];
 
     /// <summary>Marks which lines match the current find query. <paramref name="lines"/> must be ascending, one-based.</summary>
     public void SetMatches(int[] lines)
@@ -62,12 +85,38 @@ public sealed class VirtualLineList : IList, IReadOnlyList<LineViewModel>
         }
 
         var start = pageIndex * PageSize;
-        var texts = _source.ReadLines(start, PageSize);
-        var page = new LineViewModel[texts.Count];
-        for (var i = 0; i < page.Length; i++)
+        var page = new LineViewModel[Math.Min(PageSize, Count - start)];
+        if (_view is null)
         {
-            var number = start + i + 1;
-            page[i] = new LineViewModel(number, texts[i]) { IsMatch = IsMatch(number) };
+            var texts = _source.ReadLines(start, PageSize);
+            page = new LineViewModel[texts.Count];
+            for (var i = 0; i < page.Length; i++)
+            {
+                var number = start + i + 1;
+                page[i] = new LineViewModel(number, texts[i]) { IsMatch = IsMatch(number) };
+            }
+        }
+        else
+        {
+            // Read each run of neighbouring lines together.
+            var i = 0;
+            while (i < page.Length)
+            {
+                var first = LineAt(start + i);
+                var run = 1;
+                while (i + run < page.Length && LineAt(start + i + run) == first + run)
+                {
+                    run++;
+                }
+
+                var texts = _source.ReadLines(first - 1, run);
+                for (var k = 0; k < texts.Count; k++)
+                {
+                    page[i + k] = new LineViewModel(first + k, texts[k]) { IsMatch = IsMatch(first + k) };
+                }
+
+                i += run;
+            }
         }
 
         _pages[pageIndex] = page;
@@ -92,7 +141,7 @@ public sealed class VirtualLineList : IList, IReadOnlyList<LineViewModel>
         _recentPages.AddFirst(pageIndex);
     }
 
-    public int IndexOf(LineViewModel item) => item.LineNumber - 1;
+    public int IndexOf(LineViewModel item) => PositionOfLine(item.LineNumber);
 
     public IEnumerator<LineViewModel> GetEnumerator()
     {
@@ -117,9 +166,7 @@ public sealed class VirtualLineList : IList, IReadOnlyList<LineViewModel>
     }
 
     // Value-based on purpose: a cached page may be evicted and rebuilt, and an item selected earlier must still map to its row.
-    int IList.IndexOf(object? value) => value is LineViewModel line && line.LineNumber >= 1 && line.LineNumber <= Count
-        ? line.LineNumber - 1
-        : -1;
+    int IList.IndexOf(object? value) => value is LineViewModel line ? PositionOfLine(line.LineNumber) : -1;
 
     bool IList.Contains(object? value) => ((IList)this).IndexOf(value) >= 0;
 

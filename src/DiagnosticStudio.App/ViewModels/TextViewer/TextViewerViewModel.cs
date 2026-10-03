@@ -13,14 +13,19 @@ public sealed partial class TextViewerViewModel : ObservableObject, ILocationNav
     public const int MaxCopyLines = 100_000;
     private const int FindDebounceMilliseconds = 250;
 
+    private const int FilterDebounceMilliseconds = 250;
+
     private CancellationTokenSource? _searchCts;
+    private CancellationTokenSource? _filterCts;
     private int[] _matches = Array.Empty<int>();
+    private int[] _stepMatches = Array.Empty<int>();
     private bool _matchesTruncated;
+    private bool _quiet;
 
     public TextViewerViewModel(ITextLineSource source)
     {
         Source = source;
-        Lines = new VirtualLineList(source);
+        _lines = new VirtualLineList(source);
         GutterWidth = (Math.Max(1, source.LineCount.ToString(CultureInfo.InvariantCulture).Length) * 8.0) + 16;
         InfoText = string.Create(
             CultureInfo.CurrentCulture,
@@ -28,7 +33,6 @@ public sealed partial class TextViewerViewModel : ObservableObject, ILocationNav
     }
 
     public ITextLineSource Source { get; }
-    public VirtualLineList Lines { get; }
     public double GutterWidth { get; }
     public string InfoText { get; }
 
@@ -37,6 +41,20 @@ public sealed partial class TextViewerViewModel : ObservableObject, ILocationNav
 
     /// <summary>Raised when the user deliberately jumped to a line (go-to-line); feeds navigation history.</summary>
     public event EventHandler<int>? LineNavigated;
+
+    /// <summary>The lines being shown: all of them, or only those the filter lets through.</summary>
+    [ObservableProperty]
+    private VirtualLineList _lines;
+
+    /// <summary>Show only the lines that contain this text; the lines keep their numbers.</summary>
+    [ObservableProperty]
+    private string _filterText = string.Empty;
+
+    [ObservableProperty]
+    private string _filterStatus = string.Empty;
+
+    [ObservableProperty]
+    private bool _isFiltering;
 
     [ObservableProperty]
     private string _findText = string.Empty;
@@ -71,6 +89,96 @@ public sealed partial class TextViewerViewModel : ObservableObject, ILocationNav
         CurrentLine > 0 ? DiagnosticLocation.ForLine(artifactId, CurrentLine) : null;
 
     public int MatchCount => _matches.Length;
+
+    /// <summary>The filter being applied; lets callers and tests await it.</summary>
+    public Task PendingFilter { get; private set; } = Task.CompletedTask;
+
+    // ---- filter ----
+
+    partial void OnFilterTextChanged(string value) => RestartFilter();
+
+    private void RestartFilter()
+    {
+        if (_quiet)
+        {
+            return;
+        }
+
+        _filterCts?.Cancel();
+        _filterCts?.Dispose();
+        _filterCts = new CancellationTokenSource();
+        PendingFilter = RunFilterAsync(FilterText.Trim(), _filterCts.Token);
+    }
+
+    private async Task RunFilterAsync(string text, CancellationToken token)
+    {
+        try
+        {
+            if (text.Length == 0)
+            {
+                IsFiltering = false;
+                ShowLines(null);
+                return;
+            }
+
+            IsFiltering = true;
+            await Task.Delay(FilterDebounceMilliseconds, token).ConfigureAwait(true);
+
+            var result = await TextSearch.FindLinesAsync(Source, text, matchCase: false, token, int.MaxValue).ConfigureAwait(true);
+            token.ThrowIfCancellationRequested();
+
+            ShowLines(result.Lines as int[] ?? result.Lines.ToArray());
+            IsFiltering = false;
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer filter owns the list now.
+        }
+    }
+
+    private void ShowLines(int[]? view)
+    {
+        Lines = new VirtualLineList(Source, view);
+        Lines.SetMatches(_matches);
+        _stepMatches = StepMatches();
+        FilterStatus = view is null
+            ? string.Empty
+            : string.Create(CultureInfo.CurrentCulture, $"{view.Length:N0} of {Source.LineCount:N0} lines");
+        UpdateSearchStatus();
+
+        // The list was rebuilt: put the selection back on the line the user was on, when that line is still shown.
+        if (CurrentLine > 0 && Lines.IsShown(CurrentLine))
+        {
+            ScrollToLineRequested?.Invoke(this, CurrentLine);
+        }
+    }
+
+    /// <summary>Shows every line again, without waiting; used before going to a line the filter hides.</summary>
+    public void ClearFilter()
+    {
+        _filterCts?.Cancel();
+        _quiet = true;
+        try
+        {
+            FilterText = string.Empty;
+        }
+        finally
+        {
+            _quiet = false;
+        }
+
+        IsFiltering = false;
+        PendingFilter = Task.CompletedTask;
+        if (Lines.IsFiltered)
+        {
+            ShowLines(null);
+        }
+    }
+
+    // ---- find ----
+
+    /// <summary>The found lines that are shown, which F3 steps through.</summary>
+    private int[] StepMatches() => Lines.IsFiltered ? _matches.Where(Lines.IsShown).ToArray() : _matches;
 
     partial void OnFindTextChanged(string value) => RestartSearch(debounce: true);
 
@@ -107,7 +215,7 @@ public sealed partial class TextViewerViewModel : ObservableObject, ILocationNav
             ApplyMatches(result.Lines.ToArray(), result.Truncated, query);
 
             // Incremental find: land on the first match at or after where the user is.
-            if (_matches.Length > 0)
+            if (_stepMatches.Length > 0)
             {
                 JumpToMatch(FirstMatchAtOrAfter(Math.Max(CurrentLine, 1)));
             }
@@ -124,6 +232,7 @@ public sealed partial class TextViewerViewModel : ObservableObject, ILocationNav
         _matchesTruncated = truncated;
         HighlightText = query;
         Lines.SetMatches(lines);
+        _stepMatches = StepMatches();
         UpdateSearchStatus();
         OnPropertyChanged(nameof(MatchCount));
     }
@@ -131,39 +240,39 @@ public sealed partial class TextViewerViewModel : ObservableObject, ILocationNav
     [RelayCommand]
     private void FindNext()
     {
-        if (_matches.Length == 0)
+        if (_stepMatches.Length == 0)
         {
             return;
         }
 
-        var index = Array.BinarySearch(_matches, CurrentLine);
+        var index = Array.BinarySearch(_stepMatches, CurrentLine);
         var next = index >= 0 ? index + 1 : ~index;
-        JumpToMatch(next >= _matches.Length ? 0 : next);
+        JumpToMatch(next >= _stepMatches.Length ? 0 : next);
     }
 
     [RelayCommand]
     private void FindPrevious()
     {
-        if (_matches.Length == 0)
+        if (_stepMatches.Length == 0)
         {
             return;
         }
 
-        var index = Array.BinarySearch(_matches, CurrentLine);
+        var index = Array.BinarySearch(_stepMatches, CurrentLine);
         var previous = (index >= 0 ? index : ~index) - 1;
-        JumpToMatch(previous < 0 ? _matches.Length - 1 : previous);
+        JumpToMatch(previous < 0 ? _stepMatches.Length - 1 : previous);
     }
 
     private int FirstMatchAtOrAfter(int line)
     {
-        var index = Array.BinarySearch(_matches, line);
+        var index = Array.BinarySearch(_stepMatches, line);
         var at = index >= 0 ? index : ~index;
-        return at >= _matches.Length ? 0 : at;
+        return at >= _stepMatches.Length ? 0 : at;
     }
 
     private void JumpToMatch(int matchIndex)
     {
-        CurrentLine = _matches[matchIndex];
+        CurrentLine = _stepMatches[matchIndex];
         ScrollToLineRequested?.Invoke(this, CurrentLine);
         UpdateSearchStatus();
     }
@@ -176,14 +285,14 @@ public sealed partial class TextViewerViewModel : ObservableObject, ILocationNav
             return;
         }
 
-        if (_matches.Length == 0)
+        if (_stepMatches.Length == 0)
         {
             SearchStatus = "No matches";
             return;
         }
 
-        var count = _matches.Length.ToString("N0", CultureInfo.CurrentCulture) + (_matchesTruncated ? "+" : string.Empty);
-        var position = Array.BinarySearch(_matches, CurrentLine);
+        var count = _stepMatches.Length.ToString("N0", CultureInfo.CurrentCulture) + (_matchesTruncated ? "+" : string.Empty);
+        var position = Array.BinarySearch(_stepMatches, CurrentLine);
         SearchStatus = position >= 0
             ? $"{position + 1:N0} of {count}"
             : $"{count} matching lines";
@@ -229,6 +338,11 @@ public sealed partial class TextViewerViewModel : ObservableObject, ILocationNav
         }
 
         var clamped = Math.Clamp(line, 1, Source.LineCount);
+        if (!Lines.IsShown(clamped))
+        {
+            ClearFilter(); // the line is one the filter hides
+        }
+
         CurrentLine = clamped;
         ScrollToLineRequested?.Invoke(this, clamped);
         UpdateSearchStatus();

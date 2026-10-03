@@ -50,16 +50,20 @@ public partial class TextViewerView : UserControl
 
     private void SelectLine(int line)
     {
-        if (_viewModel is null || line < 1 || line > _viewModel.Lines.Count)
+        if (_viewModel is null || _viewModel.Lines.PositionOfLine(line) is not (>= 0 and var position))
         {
             return;
         }
 
-        var item = _viewModel.Lines[line - 1];
+        var item = _viewModel.Lines[position];
         LineList.SelectedItem = item;
         LineList.ScrollIntoView(item);
-        CenterOn(line - 1);
+        CenterOn(position);
     }
+
+    /// <summary>The line number shown at a place in the list (clamped to the list).</summary>
+    private int LineAt(int position) =>
+        _viewModel is { Lines.Count: > 0 } vm ? vm.Lines[Math.Clamp(position, 0, vm.Lines.Count - 1)].LineNumber : 1;
 
     // ScrollIntoView leaves the target at the very edge of the viewport; put it mid-view so surrounding context is visible.
     private void CenterOn(int index)
@@ -123,6 +127,11 @@ public partial class TextViewerView : UserControl
                 FindBox.SelectAll();
                 e.Handled = true;
                 break;
+            case Key.L when ctrl:
+                FilterBox.Focus();
+                FilterBox.SelectAll();
+                e.Handled = true;
+                break;
             case Key.G when ctrl:
                 GoToBox.Focus();
                 GoToBox.SelectAll();
@@ -151,6 +160,20 @@ public partial class TextViewerView : UserControl
                 LineList.Focus();
                 e.Handled = true;
                 break;
+        }
+    }
+
+    private void OnFilterBoxKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            if (_viewModel is not null)
+            {
+                _viewModel.FilterText = string.Empty;
+            }
+
+            LineList.Focus();
+            e.Handled = true;
         }
     }
 

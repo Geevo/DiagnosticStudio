@@ -132,12 +132,12 @@ public partial class TextViewerView
 
         if (point.Y < 0)
         {
-            vm.Select(vm.Selection.Anchor, new TextPosition((int)scroll.VerticalOffset + 1, 0));
+            vm.Select(vm.Selection.Anchor, new TextPosition(LineAt((int)scroll.VerticalOffset), 0));
             StartDragScroll(-1);
         }
         else if (point.Y > LineList.ActualHeight)
         {
-            var last = Math.Min(vm.Lines.Count, (int)(scroll.VerticalOffset + scroll.ViewportHeight));
+            var last = LineAt((int)(scroll.VerticalOffset + scroll.ViewportHeight) - 1);
             vm.Select(vm.Selection.Anchor, new TextPosition(last, vm.LineLength(last)));
             StartDragScroll(1);
         }
@@ -169,11 +169,11 @@ public partial class TextViewerView
 
         if (direction < 0)
         {
-            vm.Select(vm.Selection.Anchor, new TextPosition((int)scroll.VerticalOffset + 1, 0));
+            vm.Select(vm.Selection.Anchor, new TextPosition(LineAt((int)scroll.VerticalOffset), 0));
         }
         else
         {
-            var last = Math.Min(vm.Lines.Count, (int)(scroll.VerticalOffset + scroll.ViewportHeight));
+            var last = LineAt((int)(scroll.VerticalOffset + scroll.ViewportHeight) - 1);
             vm.Select(vm.Selection.Anchor, new TextPosition(last, vm.LineLength(last)));
         }
     }

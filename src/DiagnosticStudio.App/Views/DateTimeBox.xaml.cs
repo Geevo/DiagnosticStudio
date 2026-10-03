@@ -8,7 +8,7 @@ namespace DiagnosticStudio.App.Views;
 
 /// <summary>
 /// A date and time typed as UTC text (<c>2026-07-23 14:12:00</c>) with a calendar to pick the day. The text keeps
-/// the time, so the calendar only changes the date. It is applied when the box loses focus or on Enter.
+/// the time; the popup has a time of day to go with the picked day. It is applied when the box loses focus or on Enter.
 /// </summary>
 public partial class DateTimeBox : UserControl
 {
@@ -92,6 +92,7 @@ public partial class DateTimeBox : UserControl
             var shown = hasOwn ? own : TryParse(HintText, out var hint) ? hint : DateTime.UtcNow;
             Picker.SelectedDate = hasOwn ? own.Date : null;
             Picker.DisplayDate = shown.Date;
+            TimeBox.Text = (hasOwn ? own.TimeOfDay : DefaultTime).ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture);
         }
         finally
         {
@@ -108,10 +109,37 @@ public partial class DateTimeBox : UserControl
             return;
         }
 
-        var time = TryParse(Box.Text, out var current) ? current.TimeOfDay : DefaultTime;
-        Text = (day.Date + time).ToString(Format, CultureInfo.InvariantCulture);
+        Text = (day.Date + PickedTime()).ToString(Format, CultureInfo.InvariantCulture);
         Pop.IsOpen = false;
         Box.Focus();
+    }
+
+    // What the time box says; a time that cannot be read gives the box's default time of day.
+    private TimeSpan PickedTime() =>
+        DateTime.TryParseExact(
+            TimeBox.Text?.Trim(),
+            new[] { "H:mm", "HH:mm", "H:mm:ss", "HH:mm:ss" },
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out var time)
+            ? time.TimeOfDay
+            : DefaultTime;
+
+    // Enter applies the time to the day the box already holds; a day is picked from the calendar otherwise.
+    private void OnTimeBoxKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        if (TryParse(Box.Text, out var current))
+        {
+            Text = (current.Date + PickedTime()).ToString(Format, CultureInfo.InvariantCulture);
+            Pop.IsOpen = false;
+            Box.Focus();
+        }
     }
 
     // A calendar in a popup keeps the mouse captured after a click, which would swallow the next one.

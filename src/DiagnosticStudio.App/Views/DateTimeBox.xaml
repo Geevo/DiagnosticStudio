@@ -26,16 +26,29 @@
     </UserControl.Resources>
 
     <Grid>
-        <TextBox x:Name="Box" Height="26" MinHeight="0" Padding="4,0,30,0" VerticalContentAlignment="Center"
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <!-- The calendar button sits beside the box, not over it, so the box's own clear (X) button stays visible. -->
+        <TextBox x:Name="Box" Height="26" MinHeight="0" Padding="4,0,4,0" VerticalContentAlignment="Center"
                  Text="{Binding Text, ElementName=Root, UpdateSourceTrigger=LostFocus}" KeyDown="OnBoxKeyDown" />
-        <Button x:Name="CalendarButton" Style="{StaticResource CalendarButton}" HorizontalAlignment="Right" Width="24"
-                Height="22" Focusable="False" ToolTip="Pick a date" Click="OnCalendarClick"
+        <Button x:Name="CalendarButton" Grid.Column="1" Style="{StaticResource CalendarButton}" Width="26"
+                Height="26" Focusable="False" ToolTip="Pick a date" Click="OnCalendarClick"
                 FontFamily="{StaticResource IconFont}" FontSize="12" Content="&#xE787;" />
         <Popup x:Name="Pop" PlacementTarget="{Binding ElementName=Box}" Placement="Bottom" StaysOpen="False"
                Opened="OnPopupOpened" Closed="OnPopupClosed">
             <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1" Padding="4">
-                <Calendar x:Name="Picker" SelectedDatesChanged="OnDatePicked" PreviewMouseUp="OnCalendarMouseUp" />
+                <StackPanel>
+                    <Calendar x:Name="Picker" SelectedDatesChanged="OnDatePicked" PreviewMouseUp="OnCalendarMouseUp" />
+                    <StackPanel Orientation="Horizontal" Margin="6,4,6,2">
+                        <TextBlock Text="Time" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBox x:Name="TimeBox" Width="90" Height="26" MinHeight="0" VerticalContentAlignment="Center"
+                                 ToolTip="Time of day, UTC (HH:mm or HH:mm:ss). It is used when a day is picked; press Enter to apply it to the day already in the box."
+                                 KeyDown="OnTimeBoxKeyDown" />
+                    </StackPanel>
+                </StackPanel>
             </Border>
         </Popup>
     </Grid>

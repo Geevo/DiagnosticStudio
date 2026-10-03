@@ -194,7 +194,7 @@ public sealed partial class SearchResultsViewModel : ObservableObject
 
         if (_workspace.Current is not { } workspace)
         {
-            StatusText = "Open a bundle before searching.";
+            StatusText = "Open an archive or folder before searching.";
             return;
         }
 

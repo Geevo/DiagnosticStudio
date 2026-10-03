@@ -71,8 +71,8 @@
                                   ToolTip="The file's location on this machine (a working copy when it came from an archive)"
                                   Command="{Binding PlacementTarget.Tag.Explorer.CopyPathCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                   CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
-                        <MenuItem Header="Copy path in bundle"
-                                  ToolTip="Archive, folders and file name, for example Bundle.zip, logs.cab, agent.log"
+                        <MenuItem Header="Copy path in archive"
+                                  ToolTip="Archive, folders and file name, for example Logs.zip, mdm.cab, agent.log"
                                   Command="{Binding PlacementTarget.Tag.Explorer.CopyBundlePathCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                   CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
                         <MenuItem Header="Copy name"
@@ -115,7 +115,7 @@
             <MenuItem Header="_File">
                 <MenuItem Header="_Open Archive..." InputGestureText="Ctrl+O" Command="{Binding OpenBundleCommand}" />
                 <MenuItem Header="Open _Folder..." InputGestureText="Ctrl+Shift+O" Command="{Binding OpenFolderCommand}" />
-                <MenuItem Header="_Close Bundle" Command="{Binding CloseBundleCommand}" />
+                <MenuItem Header="_Close Archive or Folder" Command="{Binding CloseBundleCommand}" />
                 <Separator />
                 <MenuItem Header="_Preferences">
                     <!-- A heading, not a submenu: the choices sit directly under it. -->
@@ -146,7 +146,7 @@
                 <Separator />
                 <MenuItem Header="_Problems" Command="{Binding ShowProblemsCommand}" />
                 <MenuItem Header="_Search Results" Command="{Binding ShowSearchResultsCommand}" />
-                <MenuItem Header="_Find in Bundle" Command="{Binding FocusSearchCommand}" InputGestureText="Ctrl+Shift+F" />
+                <MenuItem Header="_Find in All Files" Command="{Binding FocusSearchCommand}" InputGestureText="Ctrl+Shift+F" />
                 <MenuItem Header="O_utput" Command="{Binding ShowOutputCommand}" />
             </MenuItem>
             <MenuItem Header="_Navigate">
@@ -181,14 +181,29 @@
                     <Button Style="{StaticResource ToolbarButton}" Content="Open Archive" Command="{Binding OpenBundleCommand}" />
                     <Button Style="{StaticResource ToolbarButton}" Content="Open Folder" Command="{Binding OpenFolderCommand}" />
                 </StackPanel>
-                <TextBox x:Name="GlobalSearchBox" DockPanel.Dock="Right" Width="360" Margin="12,0,0,0"
-                         Text="{Binding SearchResults.Query, UpdateSourceTrigger=PropertyChanged}"
-                         ToolTip="Search the whole bundle (Ctrl+Shift+F). Enter to search. Operators: eventid:7031  provider:schannel  level:error  type:registry"
-                         VerticalContentAlignment="Center">
-                    <TextBox.InputBindings>
-                        <KeyBinding Key="Return" Command="{Binding SearchResults.SearchCommand}" />
-                    </TextBox.InputBindings>
-                </TextBox>
+                <Grid DockPanel.Dock="Right" Width="360" Margin="12,0,0,0">
+                    <TextBox x:Name="GlobalSearchBox"
+                             Text="{Binding SearchResults.Query, UpdateSourceTrigger=PropertyChanged}"
+                             ToolTip="Search every file that is open (Ctrl+Shift+F). Enter to search. Operators: eventid:7031  provider:schannel  level:error  type:registry"
+                             VerticalContentAlignment="Center">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Return" Command="{Binding SearchResults.SearchCommand}" />
+                        </TextBox.InputBindings>
+                    </TextBox>
+                    <TextBlock Text="Search all files (Ctrl+Shift+F)" Margin="12,0,12,0" VerticalAlignment="Center"
+                               IsHitTestVisible="False" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SearchResults.Query}" Value="">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
                 <Border />
             </DockPanel>
         </Border>
@@ -203,6 +218,38 @@
 
             <!-- Explorer -->
             <DockPanel Grid.Column="0" Background="{DynamicResource PanelBrush}">
+                <!-- The two views of everything that is open, apart from the files below -->
+                <StackPanel DockPanel.Dock="Top" Margin="8,6,8,6">
+                    <TextBlock Text="VIEWS" Style="{StaticResource PanelTitle}" Margin="0,0,0,4" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Style="{StaticResource ViewTile}" Command="{Binding Explorer.OpenOverviewCommand}"
+                                Tag="{Binding Documents.IsOverviewActive}"
+                                ToolTip="Overview: what was opened, and the findings that need attention">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE80F;" FontFamily="{StaticResource IconFont}" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                <StackPanel>
+                                    <TextBlock Text="Overview" FontWeight="SemiBold" />
+                                    <TextBlock Text="Summary" FontSize="10" Foreground="{DynamicResource MutedTextBrush}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="1" Style="{StaticResource ViewTile}" Margin="0" Command="{Binding Explorer.OpenTimelineCommand}"
+                                Tag="{Binding Documents.IsTimelineActive}"
+                                ToolTip="Timeline: everything with a timestamp, from every log, in time order">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE823;" FontFamily="{StaticResource IconFont}" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                <StackPanel>
+                                    <TextBlock Text="Timeline" FontWeight="SemiBold" />
+                                    <TextBlock Text="All events by time" FontSize="10" Foreground="{DynamicResource MutedTextBrush}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </StackPanel>
                 <Border DockPanel.Dock="Top" Background="{DynamicResource PanelHeaderBrush}" Padding="8,4">
                     <DockPanel>
                         <TextBlock Text="EXPLORER" Style="{StaticResource PanelTitle}" Margin="0,0,12,0" />
@@ -214,11 +261,6 @@
                                      Command="{Binding Explorer.ShowLogicalCommand}" />
                     </DockPanel>
                 </Border>
-                <Button DockPanel.Dock="Top" Content="Overview" HorizontalContentAlignment="Left" Padding="8,4"
-                        BorderThickness="0" Background="Transparent" Command="{Binding Explorer.OpenOverviewCommand}" />
-                <Button DockPanel.Dock="Top" Content="Timeline" HorizontalContentAlignment="Left" Padding="8,4"
-                        BorderThickness="0" Background="Transparent" Command="{Binding Explorer.OpenTimelineCommand}"
-                        ToolTip="Everything with a timestamp, in time order" />
                 <!-- Filter by name, expand/collapse -->
                 <Grid DockPanel.Dock="Top" Margin="6,2,6,4">
                     <Grid.ColumnDefinitions>

@@ -1,0 +1,42 @@
+<UserControl x:Class="DiagnosticStudio.App.Views.DateTimeBox"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root">
+
+    <UserControl.Resources>
+        <Style x:Key="CalendarButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Face" Background="{TemplateBinding Background}" CornerRadius="3" Margin="2">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Face" Property="Background" Value="{DynamicResource SelectedLineBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <TextBox x:Name="Box" Height="26" MinHeight="0" Padding="4,0,30,0" VerticalContentAlignment="Center"
+                 Text="{Binding Text, ElementName=Root, UpdateSourceTrigger=LostFocus}" KeyDown="OnBoxKeyDown" />
+        <Button x:Name="CalendarButton" Style="{StaticResource CalendarButton}" HorizontalAlignment="Right" Width="24"
+                Height="22" Focusable="False" ToolTip="Pick a date" Click="OnCalendarClick"
+                FontFamily="{StaticResource IconFont}" FontSize="12" Content="&#xE787;" />
+        <Popup x:Name="Pop" PlacementTarget="{Binding ElementName=Box}" Placement="Bottom" StaysOpen="False"
+               Opened="OnPopupOpened" Closed="OnPopupClosed">
+            <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1" Padding="4">
+                <Calendar x:Name="Picker" SelectedDatesChanged="OnDatePicked" PreviewMouseUp="OnCalendarMouseUp" />
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>

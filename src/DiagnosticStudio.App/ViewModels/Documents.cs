@@ -50,7 +50,7 @@ public sealed class OverviewDocumentViewModel : DocumentViewModel
         if (workspace is null)
         {
             Sections = Array.Empty<OverviewSection>();
-            EmptyMessage = "No bundle is open. Drop a ZIP or an extracted folder here, or use File > Open Archive (Ctrl+O).";
+            EmptyMessage = "Nothing is open. Drop a ZIP or an extracted folder here, or use File > Open Archive (Ctrl+O).";
             return;
         }
 
@@ -71,7 +71,7 @@ public sealed class OverviewDocumentViewModel : DocumentViewModel
 
         var bundle = new List<DetailRow>
         {
-            new("Bundle", Path.GetFileName(workspace.InputPath.TrimEnd('\\', '/'))),
+            new("Name", Path.GetFileName(workspace.InputPath.TrimEnd('\\', '/'))),
             new("Source path", workspace.InputPath),
         };
 
@@ -116,7 +116,7 @@ public sealed class OverviewDocumentViewModel : DocumentViewModel
 
         return new[]
         {
-            new OverviewSection("Bundle", bundle),
+            new OverviewSection("Opened", bundle),
             new OverviewSection("Artifacts", counts),
             new OverviewSection("Ingestion", ingestion),
         };

@@ -81,7 +81,7 @@ public sealed partial class WorkspaceViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            _output.Write(OutputSeverity.Warning, "Ingestion", "Opening the bundle was cancelled.");
+            _output.Write(OutputSeverity.Warning, "Ingestion", "Opening was cancelled.");
         }
         catch (Exception ex)
         {

@@ -25,7 +25,7 @@ public sealed class FileDialogService : IFileDialogService
 
     public string? PickBundleFolder()
     {
-        var dialog = new OpenFolderDialog { Title = "Open extracted diagnostic bundle folder" };
+        var dialog = new OpenFolderDialog { Title = "Open extracted diagnostics folder" };
         return dialog.ShowDialog() == true ? dialog.FolderName : null;
     }
 }

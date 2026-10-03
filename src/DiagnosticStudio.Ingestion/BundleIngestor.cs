@@ -40,7 +40,7 @@ public sealed class BundleIngestor : IBundleIngestor
         var isDirectory = Directory.Exists(inputPath);
         if (!isFile && !isDirectory)
         {
-            throw new FileNotFoundException("The bundle path does not exist.", inputPath);
+            throw new FileNotFoundException("The path does not exist.", inputPath);
         }
 
         var fullInput = Path.GetFullPath(inputPath);

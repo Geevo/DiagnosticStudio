@@ -190,7 +190,7 @@ public class TimelineViewModelTests
     {
         var vm = await Create(null, Artifact("x.reg", ArtifactType.RegistryExport));
 
-        Assert.Equal("This bundle has no event logs or text logs.", vm.StatusText);
+        Assert.Equal("There are no event logs or text logs here.", vm.StatusText);
         Assert.Empty(vm.Rows);
         Assert.False(vm.HasSources);
     }

@@ -44,7 +44,7 @@
                               IsChecked="{Binding IncludeEventMessages}"
                               ToolTip="Also search event message text. Slower: each event's message is rendered from provider metadata." />
                     <CheckBox Content="File names" VerticalAlignment="Center" IsChecked="{Binding IncludeFileNames}"
-                              ToolTip="Also match artifact names and their path inside the bundle." />
+                              ToolTip="Also match artifact names and their path inside the archive." />
                 </StackPanel>
                 <Button DockPanel.Dock="Left" Content="Cancel" Margin="0,0,8,0" Padding="8,1" Command="{Binding CancelCommand}">
                     <Button.Style>

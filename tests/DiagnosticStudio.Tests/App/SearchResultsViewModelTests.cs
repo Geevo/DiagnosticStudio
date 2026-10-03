@@ -249,7 +249,7 @@ public sealed class SearchResultsViewModelTests : IDisposable
         vm.Query = "x";
         vm.SearchCommand.Execute(null);
 
-        Assert.Contains("Open a bundle", vm.StatusText);
+        Assert.Contains("Open an archive or folder", vm.StatusText);
         Assert.Empty(svc.Calls);
     }
 

@@ -216,7 +216,7 @@ public sealed class ProblemsViewModelTests : IDisposable
         Assert.Empty(vm.Attention);
         Assert.False(vm.HasFindings);
         Assert.Equal("Problems", vm.TabHeader);
-        Assert.Contains("Open a bundle", vm.StatusText);
+        Assert.Contains("Open an archive or folder", vm.StatusText);
     }
 
     [Fact]

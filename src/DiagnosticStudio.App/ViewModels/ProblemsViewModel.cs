@@ -169,7 +169,7 @@ public sealed partial class ProblemsViewModel : ObservableObject
     /// <summary>Findings the Overview's Attention Needed section shows; the full list stays here.</summary>
     public const int AttentionLimit = 5;
 
-    private const string NoWorkspaceText = "Open a bundle to evaluate the built-in rules.";
+    private const string NoWorkspaceText = "Open an archive or folder to evaluate the built-in rules.";
 
     private readonly WorkspaceViewModel _workspace;
     private readonly IFindingsService _service;

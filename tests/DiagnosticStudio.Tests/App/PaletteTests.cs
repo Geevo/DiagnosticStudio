@@ -46,7 +46,9 @@ public sealed class PaletteTests
         var palette = Keys("Palette.Light.xaml");
         var used = new HashSet<string>(StringComparer.Ordinal);
 
+        // Menus.xaml is the Fluent theme's own menu templates, which use that theme's brushes, not the palette.
         foreach (var file in Directory.EnumerateFiles(AppViewsFolder(), "*.xaml", SearchOption.AllDirectories)
+                     .Where(f => Path.GetFileName(f) != "Menus.xaml")
                      .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
                                  && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")))
         {

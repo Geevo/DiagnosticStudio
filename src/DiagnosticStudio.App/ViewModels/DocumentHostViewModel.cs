@@ -63,8 +63,15 @@ public sealed partial class DocumentHostViewModel : ObservableObject
     [ObservableProperty]
     private DocumentViewModel? _activeDocument;
 
+    /// <summary>Whether the Overview or the Timeline tab is the one showing, so their buttons can say which view is open.</summary>
+    public bool IsOverviewActive => ActiveDocument is OverviewDocumentViewModel;
+
+    public bool IsTimelineActive => ActiveDocument is TimelineDocumentViewModel;
+
     partial void OnActiveDocumentChanged(DocumentViewModel? value)
     {
+        OnPropertyChanged(nameof(IsOverviewActive));
+        OnPropertyChanged(nameof(IsTimelineActive));
         if (!_isNavigating && value?.Location is { } location)
         {
             _history.Record(location);

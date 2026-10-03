@@ -127,7 +127,7 @@ public sealed partial class TimelineDocumentViewModel : DocumentViewModel
 
     /// <summary>Lets Back and Forward return to the timeline; its selected row stays as it was left.</summary>
     public override DiagnosticLocation Location { get; } = DiagnosticLocation.ForTimeline();
-    public override string? ToolTip => "Everything with a timestamp in the bundle's event logs and text logs, in time order";
+    public override string? ToolTip => "Everything with a timestamp in the event logs and text logs, in time order";
 
     public IReadOnlyList<SeverityOption> SeverityOptions => SeverityOption.All;
     public IReadOnlyList<AroundOption> AroundOptions => AroundOption.All;
@@ -177,6 +177,13 @@ public sealed partial class TimelineDocumentViewModel : DocumentViewModel
 
     [ObservableProperty]
     private string _rangeError = string.Empty;
+
+    /// <summary>The earliest and latest times shown, where the range calendars open when their box is empty.</summary>
+    [ObservableProperty]
+    private string _firstShownText = string.Empty;
+
+    [ObservableProperty]
+    private string _lastShownText = string.Empty;
 
     [ObservableProperty]
     private AroundOption _selectedAround = AroundOption.All[1];
@@ -349,8 +356,8 @@ public sealed partial class TimelineDocumentViewModel : DocumentViewModel
         {
             Rows = VirtualTimelineList.Empty;
             StatusText = _index.ArtifactsExamined == 0
-                ? "This bundle has no event logs or text logs."
-                : "No timestamps could be read from this bundle's event logs and text logs.";
+                ? "There are no event logs or text logs here."
+                : "No timestamps could be read from the event logs and text logs.";
             return;
         }
 
@@ -407,6 +414,8 @@ public sealed partial class TimelineDocumentViewModel : DocumentViewModel
             var first = new DateTime(TimelineSelector.EffectiveTicks(_index.Entries[Rows.Order[0]], _offsets), DateTimeKind.Utc);
             var last = new DateTime(TimelineSelector.EffectiveTicks(_index.Entries[Rows.Order[^1]], _offsets), DateTimeKind.Utc);
             text += $" · {first:yyyy-MM-dd HH:mm:ss} to {last:yyyy-MM-dd HH:mm:ss} UTC";
+            FirstShownText = first.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+            LastShownText = last.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
         }
 
         StatusText = text;

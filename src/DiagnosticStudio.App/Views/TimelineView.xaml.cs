@@ -56,14 +56,4 @@ public partial class TimelineView : UserControl
             e.Handled = true;
         }
     }
-
-    // The range boxes apply when they lose focus; Enter should apply too.
-    private void OnTimeBoxKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Enter && sender is TextBox box)
-        {
-            box.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
-            e.Handled = true;
-        }
-    }
 }

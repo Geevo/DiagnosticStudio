@@ -82,13 +82,13 @@
                           DisplayMemberPath="Label" SelectedItem="{Binding SelectedSeverity}" ToolTip="Level" />
 
                 <TextBlock Text="From" VerticalAlignment="Center" Margin="0,0,4,4" />
-                <TextBox x:Name="FromBox" Width="140" Margin="0,0,6,4" Style="{StaticResource CompactBox}" VerticalContentAlignment="Center"
-                         Text="{Binding FromText, UpdateSourceTrigger=LostFocus}" KeyDown="OnTimeBoxKeyDown"
-                         ToolTip="Start of the range, UTC, e.g. 2026-07-23 14:12:00. Enter to apply." />
+                <local:DateTimeBox x:Name="FromBox" Width="190" Margin="0,0,6,4" DefaultTime="00:00:00"
+                                   Text="{Binding FromText, UpdateSourceTrigger=PropertyChanged}" HintText="{Binding FirstShownText}"
+                                   ToolTip="Start of the range, UTC, e.g. 2026-07-23 14:12:00. Type it and press Enter, or pick the day from the calendar." />
                 <TextBlock Text="to" VerticalAlignment="Center" Margin="0,0,4,4" />
-                <TextBox x:Name="ToBox" Width="140" Margin="0,0,12,4" Style="{StaticResource CompactBox}" VerticalContentAlignment="Center"
-                         Text="{Binding ToText, UpdateSourceTrigger=LostFocus}" KeyDown="OnTimeBoxKeyDown"
-                         ToolTip="End of the range, UTC. Enter to apply." />
+                <local:DateTimeBox x:Name="ToBox" Width="190" Margin="0,0,12,4" DefaultTime="23:59:59"
+                                   Text="{Binding ToText, UpdateSourceTrigger=PropertyChanged}" HintText="{Binding LastShownText}"
+                                   ToolTip="End of the range, UTC. Type it and press Enter, or pick the day from the calendar." />
 
                 <Button Content="Around selection" Margin="0,0,4,4" Style="{StaticResource CompactButton}" Command="{Binding ShowAroundCommand}"
                         ToolTip="Show only what happened close to the selected entry, in every log" />

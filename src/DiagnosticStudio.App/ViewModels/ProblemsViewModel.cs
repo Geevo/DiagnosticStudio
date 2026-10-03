@@ -184,7 +184,8 @@ public sealed partial class ProblemsViewModel : ObservableObject
         IFindingsService service,
         DocumentHostViewModel documents,
         IOutputLog output,
-        IFileHealthService? health = null)
+        IFileHealthService? health = null,
+        CustomRules.RulesDocumentViewModel? customRules = null)
     {
         _workspace = workspace;
         _service = service;
@@ -193,7 +194,16 @@ public sealed partial class ProblemsViewModel : ObservableObject
         _health = health;
         _statusText = NoWorkspaceText;
         _workspace.WorkspaceChanged += (_, _) => Restart();
+
+        // Saved rules run again over what is open, without having to open it again.
+        if (customRules is not null)
+        {
+            customRules.Saved += (_, _) => Reevaluate();
+        }
     }
+
+    /// <summary>Evaluates the rules again over what is open.</summary>
+    public void Reevaluate() => Restart();
 
     public ObservableCollection<ProblemGroupViewModel> Groups { get; } = new();
 

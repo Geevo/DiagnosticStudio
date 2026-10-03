@@ -308,6 +308,9 @@ public sealed partial class ExplorerViewModel : ObservableObject
     [RelayCommand]
     private void OpenOverview() => _documents.ShowOverview();
 
+    [RelayCommand]
+    private void OpenRules() => _documents.ShowRules();
+
     // ---- right-click actions on a file ----
 
     /// <summary>Notepad++ is installed, so the menu offers it.</summary>

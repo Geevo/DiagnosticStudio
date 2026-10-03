@@ -117,6 +117,8 @@
                 <MenuItem Header="Open _Folder..." InputGestureText="Ctrl+Shift+O" Command="{Binding OpenFolderCommand}" />
                 <MenuItem Header="_Close Archive or Folder" Command="{Binding CloseBundleCommand}" />
                 <Separator />
+                <MenuItem Header="Custom _Rules..." Command="{Binding Explorer.OpenRulesCommand}"
+                          ToolTip="Write your own checks: look for text, events or files, and report them in Problems" />
                 <MenuItem Header="_Preferences">
                     <!-- A heading, not a submenu: the choices sit directly under it. -->
                     <!-- Not hit-testable or focusable, so it neither highlights nor closes the menu. -->
@@ -226,6 +228,9 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
                         <Button Grid.Column="0" Style="{StaticResource ViewTile}" Command="{Binding Explorer.OpenOverviewCommand}"
                                 Tag="{Binding Documents.IsOverviewActive}"
                                 ToolTip="Overview: what was opened, and the findings that need attention">

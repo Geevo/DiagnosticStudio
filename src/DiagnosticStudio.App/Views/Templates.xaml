@@ -6,6 +6,7 @@
                     xmlns:ev="clr-namespace:DiagnosticStudio.App.ViewModels.EventLogViewer"
                     xmlns:sv="clr-namespace:DiagnosticStudio.App.ViewModels.StructuredViewer"
                     xmlns:tl="clr-namespace:DiagnosticStudio.App.ViewModels.Timeline"
+                    xmlns:cr="clr-namespace:DiagnosticStudio.App.ViewModels.CustomRules"
                     xmlns:tb="clr-namespace:DiagnosticStudio.App.ViewModels.TableViewer"
                     xmlns:hv="clr-namespace:DiagnosticStudio.App.ViewModels.HtmlViewer"
                     xmlns:views="clr-namespace:DiagnosticStudio.App.Views">
@@ -128,6 +129,10 @@
 
     <DataTemplate DataType="{x:Type tl:TimelineDocumentViewModel}">
         <views:TimelineView />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type cr:RulesDocumentViewModel}">
+        <views:RulesView />
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type hv:HtmlViewerViewModel}">

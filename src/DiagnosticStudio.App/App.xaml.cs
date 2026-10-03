@@ -1,6 +1,7 @@
 ﻿using System.Windows;
 using DiagnosticStudio.App.Services;
 using DiagnosticStudio.App.ViewModels;
+using DiagnosticStudio.App.ViewModels.CustomRules;
 using DiagnosticStudio.App.ViewModels.Search;
 using DiagnosticStudio.Core.Archives;
 using DiagnosticStudio.Core.Documents;
@@ -12,6 +13,7 @@ using DiagnosticStudio.Core.Rules;
 using DiagnosticStudio.Core.Timeline;
 using DiagnosticStudio.Timeline;
 using DiagnosticStudio.Rules;
+using DiagnosticStudio.Rules.Custom;
 using DiagnosticStudio.Ingestion;
 using DiagnosticStudio.Parsers;
 using DiagnosticStudio.Parsers.Structured;
@@ -134,7 +136,13 @@ public partial class App : Application
         }
 
         services.AddSingleton<IBackgroundWorkGate>(_ => new BackgroundWorkGate(BackgroundWorkGate.DefaultSlots));
-        services.AddSingleton<IFindingsService, FindingsService>();
+        services.AddSingleton<FindingsService>();
+        services.AddSingleton<ICustomRuleStore, FileCustomRuleStore>();
+        services.AddSingleton<ICustomRuleEngine>(sp => new CustomRuleEngine(sp.GetRequiredService<IDocumentLoader>()));
+        services.AddSingleton<IFindingsService>(sp => new CustomRuleFindingsService(
+            sp.GetRequiredService<FindingsService>(),
+            sp.GetRequiredService<ICustomRuleStore>(),
+            sp.GetRequiredService<ICustomRuleEngine>()));
         services.AddSingleton<IFileHealthService, FileHealthService>();
         services.AddSingleton<ITimelineService, TimelineService>();
 
@@ -148,6 +156,7 @@ public partial class App : Application
 
         // View models and shell.
         services.AddSingleton<WorkspaceViewModel>();
+        services.AddSingleton<RulesDocumentViewModel>();
         services.AddSingleton<DocumentHostViewModel>();
         services.AddSingleton<ExplorerViewModel>();
         services.AddSingleton<ProblemsViewModel>();

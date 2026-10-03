@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using DiagnosticStudio.Core.Artifacts;
 using DiagnosticStudio.Core.Navigation;
 using DiagnosticStudio.Core.Timeline;
+using DiagnosticStudio.App.ViewModels.CustomRules;
 using DiagnosticStudio.App.ViewModels.Timeline;
 using DiagnosticStudio.Parsers;
 
@@ -25,6 +26,7 @@ public sealed partial class DocumentHostViewModel : ObservableObject
     // before the services that start background work on a new bundle, so its handler runs first.
     private readonly IDocumentCache? _cache;
     private readonly ITimelineService? _timelineService;
+    private readonly RulesDocumentViewModel? _rules;
     /// <summary>The timeline of the open bundle, once it has been opened; kept when its tab is closed.</summary>
     [ObservableProperty]
     private TimelineDocumentViewModel? _timeline;
@@ -35,8 +37,15 @@ public sealed partial class DocumentHostViewModel : ObservableObject
         INavigationHistory history,
         IOutputLog output,
         IDocumentCache? cache = null,
-        ITimelineService? timeline = null)
+        ITimelineService? timeline = null,
+        RulesDocumentViewModel? rules = null)
     {
+        _rules = rules;
+        if (rules is not null)
+        {
+            rules.OpenLocation = location => OpenLocation(location);
+        }
+
         _workspace = workspace;
         _cache = cache;
         _timelineService = timeline;
@@ -134,6 +143,22 @@ public sealed partial class DocumentHostViewModel : ObservableObject
         }
 
         return found;
+    }
+
+    /// <summary>Opens the Custom Rules tab: the user's own rules. It does not need anything to be open.</summary>
+    public void ShowRules()
+    {
+        if (_rules is null)
+        {
+            return;
+        }
+
+        if (!Documents.Contains(_rules))
+        {
+            Documents.Add(_rules);
+        }
+
+        ActiveDocument = _rules;
     }
 
     public bool HasBundle => _workspace.Current is not null;

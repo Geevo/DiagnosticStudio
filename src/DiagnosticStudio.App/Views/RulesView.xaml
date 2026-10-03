@@ -1,0 +1,352 @@
+<UserControl x:Class="DiagnosticStudio.App.Views.RulesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:cr="clr-namespace:DiagnosticStudio.App.ViewModels.CustomRules">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="Vis" />
+
+        <Style x:Key="CompactBox" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Padding" Value="4,0" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="CompactCombo" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Padding" Value="6,0" />
+        </Style>
+        <Style x:Key="CompactButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+            <Setter Property="Margin" Value="0,10,0,3" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style x:Key="Hint" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="0,3,0,0" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200" MinWidth="150" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" MinWidth="300" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="370" MinWidth="240" />
+        </Grid.ColumnDefinitions>
+
+        <!-- The rules -->
+        <DockPanel Grid.Column="0" Background="{DynamicResource PanelBrush}">
+            <Border DockPanel.Dock="Top" Background="{DynamicResource PanelHeaderBrush}" Padding="8,6">
+                <TextBlock Text="MY RULES" Style="{StaticResource PanelTitle}" />
+            </Border>
+            <WrapPanel DockPanel.Dock="Top" Margin="8,8,8,4">
+                <Button Content="New" Command="{Binding NewRuleCommand}" Style="{StaticResource CompactButton}"
+                        ToolTip="Add a blank rule. Examples of common checks are in the help on the right." Margin="0,0,6,6" />
+                <Button Content="Import" Command="{Binding ImportCommand}" Style="{StaticResource CompactButton}"
+                        ToolTip="Add the rules from a JSON file. They are switched off until you enable them." Margin="0,0,6,6" />
+                <Button Content="Export" Command="{Binding ExportCommand}" Style="{StaticResource CompactButton}"
+                        ToolTip="Save all of these rules to a JSON file to share" Margin="0,0,6,6" />
+            </WrapPanel>
+            <Button DockPanel.Dock="Bottom" Content="Remove selected" Command="{Binding RemoveCommand}"
+                    Style="{StaticResource CompactButton}" Margin="8,4,8,8" HorizontalAlignment="Left" />
+            <TextBlock DockPanel.Dock="Top" Margin="10,4,10,0"
+                       Text="There are no rules yet. Add one with New, pick an example on the right, or Import a file someone shared with you.">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+            <ListBox ItemsSource="{Binding Rules}" SelectedItem="{Binding Selected, Mode=TwoWay}"
+                     BorderThickness="0" Background="Transparent" HorizontalContentAlignment="Stretch">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="{x:Type cr:RuleItemViewModel}">
+                        <DockPanel Margin="0,2">
+                            <CheckBox DockPanel.Dock="Left" IsChecked="{Binding Enabled}" VerticalAlignment="Center" Margin="0,0,6,0"
+                                      ToolTip="Run this rule automatically when something is opened" />
+                            <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        </DockPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DockPanel>
+
+        <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent" />
+
+        <!-- The selected rule -->
+        <Grid Grid.Column="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Background="{DynamicResource PanelHeaderBrush}" Padding="10,6">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="Save" Command="{Binding SaveCommand}" Style="{StaticResource CompactButton}"
+                            Margin="8,0,0,0" ToolTip="Save the rules to your profile and run the enabled ones again" />
+                    <TextBlock DockPanel.Dock="Right" Text="Unsaved changes" VerticalAlignment="Center" Foreground="{DynamicResource WarningTextBrush}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsDirty}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock Text="RULE" Style="{StaticResource PanelTitle}" VerticalAlignment="Center" />
+                </DockPanel>
+            </Border>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="14,4,14,14" DataContext="{Binding Selected}">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+
+                    <TextBlock Text="Name" Style="{StaticResource FieldLabel}" />
+                    <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompactBox}" />
+
+                    <TextBlock Text="Description" Style="{StaticResource FieldLabel}" />
+                    <TextBox Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompactBox}" />
+
+                    <CheckBox Content="Enabled: run automatically when an archive or folder is opened" IsChecked="{Binding Enabled}" Margin="0,12,0,0" />
+
+                    <TextBlock Text="WHAT TO LOOK AT" Style="{StaticResource PanelTitle}" Margin="0,18,0,0" />
+                    <TextBlock Style="{StaticResource Hint}"
+                               Text="Leave a box blank to not filter on it. A line or event must pass every box you fill in." />
+
+                    <TextBlock Text="Look at" Style="{StaticResource FieldLabel}" />
+                    <ComboBox ItemsSource="{x:Static cr:RuleItemViewModel.Kinds}" SelectedValue="{Binding Kind}"
+                              SelectedValuePath="Value" DisplayMemberPath="Label"
+                              Style="{StaticResource CompactCombo}" HorizontalAlignment="Left" Width="200" />
+
+                    <TextBlock Text="In files named (* and ? allowed; several separated by commas, for example System.evtx or *.log, *.txt)" Style="{StaticResource FieldLabel}" />
+                    <TextBox Text="{Binding File, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompactBox}" />
+
+                    <StackPanel>
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsEventRule}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <TextBlock Text="Provider (as shown in the event log viewer; commas and * allowed, for example disk or Microsoft-Windows-*)" Style="{StaticResource FieldLabel}" />
+                        <TextBox Text="{Binding Provider, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompactBox}" />
+                        <TextBlock Text="Event ids (comma separated, for example 41, 6008)" Style="{StaticResource FieldLabel}" />
+                        <TextBox Text="{Binding EventIds, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompactBox}" />
+                        <TextBlock Text="Levels (Critical, Error, Warning, Information, Verbose)" Style="{StaticResource FieldLabel}" />
+                        <TextBox Text="{Binding Levels, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompactBox}" />
+                    </StackPanel>
+
+                    <TextBlock Text="Contains this text. For an event, its message or data." Style="{StaticResource FieldLabel}" />
+                    <TextBox Text="{Binding Contains, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompactBox}" />
+
+                    <Expander Header="More options: leave things out, regular expression, one data item, time range" IsExpanded="{Binding MoreLookOpen, Mode=TwoWay}" Margin="0,14,0,0">
+                        <StackPanel Margin="0,2,0,0">
+                            <TextBlock Text="Must not contain this text" Style="{StaticResource FieldLabel}" />
+                            <TextBox Text="{Binding NotContains, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompactBox}" />
+
+                            <TextBlock Text="Matches this regular expression (help on the right explains them)" Style="{StaticResource FieldLabel}" />
+                            <TextBox Text="{Binding Regex, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompactBox}"
+                                     FontFamily="{StaticResource MonoFont}" />
+                            <TextBlock Text="Must not match this regular expression" Style="{StaticResource FieldLabel}" />
+                            <TextBox Text="{Binding NotRegex, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompactBox}"
+                                     FontFamily="{StaticResource MonoFont}" />
+                            <CheckBox Content="Match case: tell upper from lower case in the text and expression boxes" IsChecked="{Binding MatchCase}" Margin="0,8,0,0" />
+
+                            <TextBlock Text="Leave out files named" Style="{StaticResource FieldLabel}" />
+                            <TextBox Text="{Binding ExcludeFile, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompactBox}" />
+
+                            <StackPanel>
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsEventRule}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
+                                <TextBlock Text="Leave out providers" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding ExcludeProvider, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompactBox}" />
+                                <TextBlock Text="Leave out event ids" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding ExcludeEventIds, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompactBox}" />
+                                <TextBlock Text="Data item: the text and expression boxes look only at this named value of the event (for example LogonType)" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding DataField, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompactBox}" />
+                            </StackPanel>
+
+                            <TextBlock Text="From this time (UTC, like 2026-03-14 09:30). For lines, only those with a time in them can match." Style="{StaticResource FieldLabel}" />
+                            <TextBox Text="{Binding After, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompactBox}"
+                                     HorizontalAlignment="Left" Width="200" />
+                            <TextBlock Text="Until this time" Style="{StaticResource FieldLabel}" />
+                            <TextBox Text="{Binding Before, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompactBox}"
+                                     HorizontalAlignment="Left" Width="200" />
+                        </StackPanel>
+                    </Expander>
+
+                    <TextBlock Text="WHAT TO REPORT" Style="{StaticResource PanelTitle}" Margin="0,22,0,0" />
+
+                    <TextBlock Text="Severity" Style="{StaticResource FieldLabel}" />
+                    <ComboBox ItemsSource="{x:Static cr:RuleItemViewModel.Severities}" SelectedValue="{Binding Severity}"
+                              SelectedValuePath="Value" DisplayMemberPath="Label"
+                              Style="{StaticResource CompactCombo}" HorizontalAlignment="Left" Width="200" />
+
+                    <TextBlock Text="Title (blank for a standard one)" Style="{StaticResource FieldLabel}" />
+                    <TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompactBox}" />
+                    <TextBlock Style="{StaticResource Hint}"
+                               Text="You can use {Name} {Count} {Key} {File} {Provider} {EventId} {Text} {Time} {From} {To} {Minutes}, for example {Provider} logged {Count} errors." />
+
+                    <Expander Header="More options: grouping, and when to report (burst, silence, missing)" IsExpanded="{Binding MoreReportOpen, Mode=TwoWay}" Margin="0,14,0,0">
+                        <StackPanel Margin="0,2,0,0">
+                            <StackPanel Visibility="{Binding UsesGrouping, Converter={StaticResource Vis}}">
+                                <TextBlock Text="Group the matches" Style="{StaticResource FieldLabel}" />
+                                <ComboBox ItemsSource="{x:Static cr:RuleItemViewModel.Groupings}" SelectedValue="{Binding GroupBy}"
+                                          SelectedValuePath="Value" DisplayMemberPath="Label"
+                                          Style="{StaticResource CompactCombo}" HorizontalAlignment="Left" Width="320" />
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="Each finding links to the lines or events it is based on. To group by a captured value, put a group in the regular expression, for example error code (?&lt;key&gt;0x[0-9A-F]+)." />
+                            </StackPanel>
+
+                            <TextBlock Text="Report when" Style="{StaticResource FieldLabel}" />
+                            <ComboBox ItemsSource="{x:Static cr:RuleItemViewModel.Triggers}" SelectedValue="{Binding Trigger}"
+                                      SelectedValuePath="Value" DisplayMemberPath="Label"
+                                      Style="{StaticResource CompactCombo}" HorizontalAlignment="Left" Width="380" />
+
+                            <TextBlock Text="{Binding MinMatchesLabel}" Style="{StaticResource FieldLabel}" />
+                            <TextBox Text="{Binding MinMatches, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompactBox}"
+                                     HorizontalAlignment="Left" Width="80" />
+
+                            <StackPanel Visibility="{Binding UsesWindow, Converter={StaticResource Vis}}">
+                                <TextBlock Text="{Binding WindowLabel}" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding WindowMinutes, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompactBox}"
+                                         HorizontalAlignment="Left" Width="80" />
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="Matches are placed by the time in the line or event. Those with no time are ignored." />
+                            </StackPanel>
+                        </StackPanel>
+                    </Expander>
+
+                    <TextBlock Text="{Binding Validation}" TextWrapping="Wrap" Margin="0,8,0,0" Foreground="{DynamicResource ErrorTextBrush}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Validation}" Value="">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Trying the rule on what is open -->
+            <Border Grid.Row="2" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" MaxHeight="300">
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top" Margin="14,8,14,4">
+                        <Button DockPanel.Dock="Left" Content="Test on what is open" Command="{Binding TestCommand}"
+                                Style="{StaticResource CompactButton}" Margin="0,0,10,0"
+                                ToolTip="Run this rule now on what is open, without saving it. The result is shown here; nothing is added to Problems." />
+                        <TextBlock Text="{Binding StatusText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource MutedTextBrush}" ToolTip="{Binding StatusText}" />
+                    </DockPanel>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="14,0,14,8">
+                            <TextBlock Text="{Binding TestSummary}" TextWrapping="Wrap" FontWeight="SemiBold" />
+                            <ItemsControl ItemsSource="{Binding TestProblems}" Margin="0,4,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource ErrorTextBrush}" Margin="0,1" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <ItemsControl ItemsSource="{Binding TestFindings}" Margin="0,4,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type cr:TestFindingViewModel}">
+                                        <DockPanel Margin="0,3">
+                                            <Button DockPanel.Dock="Right" Content="Open evidence" Command="{Binding OpenCommand}"
+                                                    Style="{StaticResource CompactButton}" Margin="8,0,0,0" VerticalAlignment="Top" />
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding Severity}" Foreground="{DynamicResource MutedTextBrush}" Margin="0,0,8,0" />
+                                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}" />
+                                                <TextBlock Text="{Binding EvidenceLabel}" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" />
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+
+        <GridSplitter Grid.Column="3" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent" />
+
+        <!-- Help: how rules work, examples and tips -->
+        <DockPanel Grid.Column="4" Background="{DynamicResource PanelBrush}">
+            <Border DockPanel.Dock="Top" Background="{DynamicResource PanelHeaderBrush}" Padding="10,6">
+                <TextBlock Text="HELP AND EXAMPLES" Style="{StaticResource PanelTitle}" VerticalAlignment="Center" />
+            </Border>
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="12,10,12,10">
+                    <TextBlock Text="START FROM AN EXAMPLE" Style="{StaticResource PanelTitle}" Margin="0,0,0,6" />
+                    <ComboBox ItemsSource="{Binding Examples}" SelectedItem="{Binding SelectedExample}" DisplayMemberPath="Name"
+                              Style="{StaticResource CompactCombo}" />
+                    <TextBlock Text="{Binding SelectedExample.Purpose}" TextWrapping="Wrap" Margin="0,10,0,0" />
+                    <TextBlock Text="{Binding SelectedExample.Settings}" TextWrapping="Wrap" Margin="0,8,0,0"
+                               Foreground="{DynamicResource MutedTextBrush}" FontSize="11.5" />
+                    <Button Content="Add as a new rule" Command="{Binding AddExampleCommand}" Style="{StaticResource CompactButton}"
+                            Margin="0,10,0,0" HorizontalAlignment="Left"
+                            ToolTip="Add a copy of this example to My rules, switched off, ready to change." />
+
+                    <Separator Margin="0,16,0,6" Background="{DynamicResource BorderBrush}" />
+
+                    <Expander Header="How rules work">
+                        <TextBlock Text="{Binding HowItWorks}" TextWrapping="Wrap" Margin="0,6,0,6" />
+                    </Expander>
+                    <Expander Header="Tips and regular expressions" Margin="0,4,0,0">
+                        <TextBlock Text="{Binding Tips}" TextWrapping="Wrap" Margin="0,6,0,6" FontFamily="{StaticResource MonoFont}" FontSize="11.5" />
+                    </Expander>
+
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,16,0,0"
+                               Text="{Binding StorePath, StringFormat=Saved in {0}}" />
+                </StackPanel>
+            </ScrollViewer>
+        </DockPanel>
+    </Grid>
+</UserControl>

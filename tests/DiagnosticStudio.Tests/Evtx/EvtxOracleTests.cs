@@ -10,7 +10,7 @@ namespace DiagnosticStudio.Tests.Evtx;
 /// <summary>
 /// Cross-checks the EVTX parser against the operating system's own reader on real logs. The logs are exported
 /// from this machine with <c>wevtutil</c> at test time (nothing is checked in). When a log cannot be exported
-/// here the test reports that and returns, so the suite still passes on machines without them.
+/// here the test is reported as skipped, so the suite still passes on machines without it and a skip is visible.
 /// </summary>
 [Trait("Category", "Oracle")]
 public sealed class EvtxOracleTests : IDisposable
@@ -60,16 +60,12 @@ public sealed class EvtxOracleTests : IDisposable
         }
     }
 
-    [Theory]
+    [SkippableTheory]
     [MemberData(nameof(Logs))]
     public async Task Parsed_events_match_the_operating_systems_rendering(string logName)
     {
         var path = Export(logName);
-        if (path is null)
-        {
-            _output.WriteLine($"SKIPPED: could not export '{logName}' on this machine.");
-            return;
-        }
+        Skip.If(path is null, $"could not export '{logName}' on this machine.");
 
         var file = await EvtxFileTestAccess.Open(path);
         var sw = Stopwatch.StartNew();
@@ -124,17 +120,13 @@ public sealed class EvtxOracleTests : IDisposable
         Assert.True(mismatchCount == 0, summary + Environment.NewLine + string.Join(Environment.NewLine, mismatches));
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("System")]
     [InlineData("Application")]
     public async Task Messages_agree_with_the_operating_systems_formatting_where_a_message_is_produced(string logName)
     {
         var path = Export(logName);
-        if (path is null)
-        {
-            _output.WriteLine($"SKIPPED: could not export '{logName}' on this machine.");
-            return;
-        }
+        Skip.If(path is null, $"could not export '{logName}' on this machine.");
 
         using var formatter = new DiagnosticStudio.Parsers.ProviderMessageFormatter();
         var file = await DiagnosticStudio.Parsers.Evtx.EvtxFile.OpenAsync(path, formatter, CancellationToken.None);
@@ -193,15 +185,11 @@ public sealed class EvtxOracleTests : IDisposable
         Assert.True(produced == 0 || same >= produced * 0.75, $"only {same} of {produced} messages matched");
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task Message_only_text_is_found_when_messages_are_included_on_a_real_log()
     {
         var path = Export("System");
-        if (path is null)
-        {
-            _output.WriteLine("SKIPPED: could not export 'System' on this machine.");
-            return;
-        }
+        Skip.If(path is null, "could not export 'System' on this machine.");
 
         using var formatter = new DiagnosticStudio.Parsers.ProviderMessageFormatter();
         var file = await DiagnosticStudio.Parsers.Evtx.EvtxFile.OpenAsync(path, formatter, CancellationToken.None);
@@ -228,11 +216,7 @@ public sealed class EvtxOracleTests : IDisposable
             }
         }
 
-        if (phrase is null)
-        {
-            _output.WriteLine("SKIPPED: no event with message-only text found.");
-            return;
-        }
+        Skip.If(phrase is null, "no event with message-only text found.");
 
         var sw = Stopwatch.StartNew();
         var without = DiagnosticStudio.Search.EventLogFilter.Apply(file, new DiagnosticStudio.Search.EventFilterCriteria { Text = phrase }, CancellationToken.None)!;

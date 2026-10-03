@@ -257,12 +257,11 @@ public sealed class CabArchiveProviderTests : IDisposable
         return File.Exists(path) ? path : null;
     }
 
-    private async Task<byte[]?> MakeCab(string compression, params (string Folder, string Name, byte[] Data)[] files)
+    private async Task<byte[]> MakeCab(string compression, params (string Folder, string Name, byte[] Data)[] files)
     {
-        if (FindMakeCab() is not { } makecab)
-        {
-            return null; // not a Windows machine with makecab; the store-only tests above still run
-        }
+        // Not a Windows machine with makecab: these tests are reported as skipped; the store-only tests above still run.
+        var makecab = FindMakeCab();
+        Skip.If(makecab is null, "makecab.exe is not available on this machine.");
 
         var source = _ws.PathFor("src-" + Guid.NewGuid().ToString("N"));
         var output = _ws.PathFor("made-" + Guid.NewGuid().ToString("N"));
@@ -315,7 +314,7 @@ public sealed class CabArchiveProviderTests : IDisposable
         return Encoding.ASCII.GetBytes(text.ToString(0, size));
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("MSZIP")]
     [InlineData("LZX")]
     public async Task Real_compressed_cabinets_extract_byte_for_byte(string compression)
@@ -323,11 +322,6 @@ public sealed class CabArchiveProviderTests : IDisposable
         var big = Compressible(400_000, "agent");
         var small = Compressible(2_000, "cm");
         var cab = await MakeCab(compression, ("Logs", "agent.log", big), ("Logs", "cm.log", small), ("Events", "notes.txt", Encoding.ASCII.GetBytes("hello")));
-        if (cab is null)
-        {
-            return;
-        }
-
         Assert.True(cab.Length < big.Length / 2, "the cabinet should really be compressed");
         var outcome = await Extract(cab);
 
@@ -340,16 +334,11 @@ public sealed class CabArchiveProviderTests : IDisposable
         Assert.Equal("hello", Text(outcome.Entries.Single(e => e.EntryPath == "Events/notes.txt")));
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task A_compressed_bomb_is_stopped_by_the_total_size_limit()
     {
         var zeros = new byte[20_000_000];
         var cab = await MakeCab("LZX", ("", "zeros.bin", zeros));
-        if (cab is null)
-        {
-            return;
-        }
-
         Assert.True(cab.Length < 100_000, "the cabinet should be tiny compared to its content");
         var outcome = await Extract(cab, new ExtractionLimits { MaxTotalExtractedBytes = 1_000_000, MaxSingleFileBytes = 100_000_000 });
 

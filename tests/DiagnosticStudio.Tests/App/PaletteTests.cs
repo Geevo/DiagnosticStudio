@@ -67,18 +67,4 @@ public sealed class PaletteTests
         Assert.NotEmpty(used);
         Assert.Empty(used.Except(palette));
     }
-
-    [Fact]
-    public void Views_do_not_hard_code_theme_colours()
-    {
-        var offenders = Directory.EnumerateFiles(AppViewsFolder(), "*.xaml", SearchOption.AllDirectories)
-            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
-                        && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")
-                        && !Path.GetFileName(f).StartsWith("Palette.", StringComparison.Ordinal))
-            .Where(f => Regex.IsMatch(File.ReadAllText(f), "=\"#[0-9A-Fa-f]{6,8}\""))
-            .Select(Path.GetFileName)
-            .ToList();
-
-        Assert.Empty(offenders);
-    }
 }

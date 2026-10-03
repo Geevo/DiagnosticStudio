@@ -1,6 +1,6 @@
 # Diagnostic Studio
 
-A Windows desktop workspace for reading what a support collection left behind. Built for Intune and Configuration Manager (SCCM) engineers: drop in the archive from **Collect diagnostics** on an Intune-managed device, a ConfigMgr client log folder, an MDM diagnostics folder or any ZIP or CAB, and stay in one application. Browse the files, read CMTrace and plain logs, event logs, registry exports, JSON, XML, HTML and ETL traces, search across all of it, and follow findings back to the exact line they came from.
+A Windows desktop workspace for reading what a support collection left behind. Built for Intune and Configuration Manager (SCCM) engineers: drop in the archive from **Collect diagnostics** on an Intune-managed device, a ConfigMgr client log folder, an MDM diagnostics folder or any ZIP or CAB, and stay in one application. Browse the files, read CMTrace and plain logs, Windows event logs (`.evtx`), event trace logs (`.etl`), registry exports, JSON, XML and HTML, search across all of it, and follow findings back to the exact line they came from.
 
 It replaces the usual round trip through File Explorer, Event Viewer, CMTrace, a registry viewer and an archive tool.
 
@@ -33,6 +33,7 @@ Find an exit code or an error number in every file at once; each hit opens at th
 - Intune: `IntuneManagementExtension.log`, `AgentExecutor.log`, MDM diagnostics reports, enrollment registry exports, event logs from a Collect diagnostics archive.
 - Configuration Manager: client logs such as `AppEnforce.log`, `execmgr.log`, `WUAHandler.log`, `PolicyAgent.log` and `ccmsetup.log`, in CMTrace format.
 - Co-managed devices, where the answer is spread across both sets of logs and the order things happened in matters.
+- Any Windows machine: open an `.evtx` event log or an `.etl` trace on its own, without Event Viewer, and read, filter and search its events, or put them on one timeline beside other logs.
 
 ## What it does
 

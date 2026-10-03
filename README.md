@@ -10,12 +10,23 @@ It replaces the usual round trip through File Explorer, Event Viewer, CMTrace, a
 
 All of these were opened from one archive: a fictional co-managed laptop with a failing app install, plus an event log from an ordinary Windows machine.
 
-| | |
-| --- | --- |
-| ![A CMTrace log as a table: error and warning rows tinted, with the selected line's message below](docs/images/log-table.png) | ![The timeline merging every log in the archive in time order](docs/images/timeline.png) |
-| **CMTrace logs as a table.** `IntuneManagementExtension.log`, `AppEnforce.log`, `execmgr.log` and the rest, with errors and warnings tinted, a filter, find and the full message of the selected line. | **One timeline.** Every log's entries in time order, with a per-log switch and time zone. |
-| ![Search results for an exit code across the archive, with the match highlighted](docs/images/search.png) | |
-| **Search the whole archive.** Find an exit code or an error number in every file at once; each hit opens at the matching line. | |
+### CMTrace logs as a table
+
+`IntuneManagementExtension.log`, `AppEnforce.log`, `execmgr.log` and the rest, with errors and warnings tinted, a filter, find and the full message of the selected line.
+
+![A CMTrace log as a table: error and warning rows tinted, with the selected line's message below](docs/images/log-table.png)
+
+### One timeline
+
+Every log's entries in time order, with a per-log switch and time zone.
+
+![The timeline merging every log in the archive in time order](docs/images/timeline.png)
+
+### Search the whole archive
+
+Find an exit code or an error number in every file at once; each hit opens at the matching line.
+
+![Search results for an exit code across the archive, with the match highlighted](docs/images/search.png)
 
 ## Good for
 

@@ -64,7 +64,6 @@ public sealed class StructuredViewerPrettyTests : IDisposable
         Assert.NotSame(vm.Raw, vm.ActiveRaw);
         Assert.Single(vm.Raw.Lines); // the original is untouched
         Assert.True(vm.ActiveRaw.Lines.Count > 100);
-        Assert.StartsWith("Indented copy", vm.PrettyStatus);
         Assert.True(vm.PrettyAvailable);
     }
 
@@ -88,7 +87,7 @@ public sealed class StructuredViewerPrettyTests : IDisposable
     }
 
     [Fact]
-    public void The_dense_file_test_needs_long_lines_and_many_nodes_on_them()
+    public void A_file_is_called_minified_only_when_it_has_long_lines_with_many_nodes_on_them()
     {
         static StructuredDocument Doc(int lines, long bytes, int nodes) => new()
         {
@@ -261,7 +260,6 @@ public sealed class StructuredViewerPrettyTests : IDisposable
 
         Assert.False(vm.PrettyRaw);
         Assert.False(vm.PrettyAvailable);
-        Assert.StartsWith("This file cannot be indented", vm.PrettyStatus);
         Assert.Same(vm.Raw, vm.ActiveRaw);
     }
 

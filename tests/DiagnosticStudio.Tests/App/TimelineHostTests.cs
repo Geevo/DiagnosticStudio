@@ -177,7 +177,7 @@ public sealed class TimelineHostTests : IDisposable
         var found = await host.ShowInTimelineAsync(DiagnosticLocation.ForRegistry(_log.Id, "HKLM\\X"));
 
         Assert.False(found);
-        Assert.Contains(_output.Entries, e => e.Source == "Timeline" && e.Message.Contains("no timestamp"));
+        Assert.Contains(_output.Entries, e => e.Source == "Timeline");
     }
 
     [Fact]

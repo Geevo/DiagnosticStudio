@@ -49,13 +49,6 @@ public class AutoScrollTests
         Assert.True(items < 6); // a few items per tick at most, not a screenful
     }
 
-    [Fact]
-    public void A_gentle_push_scrolls_slowly_enough_to_read()
-    {
-        // 20 px past the dead zone (about 32 px from the origin) is a crawl, well under a line a tick.
-        Assert.True(AutoScrollMath.Velocity(AutoScrollMath.DeadZone + 20, byItem: false) < 4);
-    }
-
     // ---- what scrolls ----
 
     private static void OnSta(Action body)

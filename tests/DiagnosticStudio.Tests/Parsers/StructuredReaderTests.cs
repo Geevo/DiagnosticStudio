@@ -379,7 +379,6 @@ public class StructuredReaderTests
         var (root, _) = Json(Sample);
         var document = new StructuredDocument { Artifact = null!, Format = StructuredFormat.Json, Root = root, RawSource = null! };
 
-        Assert.Equal("/", "/"); // keep the intent readable: the cases below are line to path
         Assert.Equal(string.Empty, document.PathOf(document.NodeAtLine(1)!));
         Assert.Equal("/name", document.PathOf(document.NodeAtLine(2)!));
         Assert.Equal("/items/0/id", document.PathOf(document.NodeAtLine(8)!));

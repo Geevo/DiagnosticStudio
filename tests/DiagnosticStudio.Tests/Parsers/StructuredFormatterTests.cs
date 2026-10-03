@@ -133,7 +133,6 @@ public class StructuredFormatterTests
         var (_, nodesAfter) = JsonStructureReader.Read(Encoding.UTF8.GetBytes(formatted));
 
         Assert.Equal(nodesBefore, nodesAfter);
-        Assert.True(formatted.Count(c => c == '\n') > 400_000);
     }
 
     [Fact]

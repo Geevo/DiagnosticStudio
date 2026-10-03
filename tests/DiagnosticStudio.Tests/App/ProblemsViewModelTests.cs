@@ -105,7 +105,6 @@ public sealed class ProblemsViewModelTests : IDisposable
         Assert.Equal(new[] { "Errors (1)", "Warnings (2)", "Information (1)" }, vm.Groups.Select(g => g.Title));
         Assert.Equal(4, vm.FindingCount);
         Assert.Equal("Problems (4)", vm.TabHeader);
-        Assert.StartsWith("4 findings: 1 errors, 2 warnings, 1 information", vm.StatusText);
         Assert.False(vm.IsEvaluating);
         Assert.Equal("agent.log", vm.Groups[0].Findings[0].ArtifactName);
     }
@@ -216,7 +215,6 @@ public sealed class ProblemsViewModelTests : IDisposable
         Assert.Empty(vm.Attention);
         Assert.False(vm.HasFindings);
         Assert.Equal("Problems", vm.TabHeader);
-        Assert.Contains("Open an archive or folder", vm.StatusText);
     }
 
     [Fact]

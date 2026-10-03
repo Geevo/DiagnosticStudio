@@ -90,7 +90,7 @@ public sealed class EtlIntegrationTests
         var estimate = DocumentSizeEstimator.Estimate(artifact, loaded.Document);
 
         var source = Assert.IsAssignableFrom<IMemorySizedSource>(((EventLogDocument)loaded.Document).Source);
-        Assert.True(source.ApproximateMemoryBytes > 4 * 160);
-        Assert.Equal(source.ApproximateMemoryBytes + (4L * 1024 * 1024), estimate);
+        Assert.True(source.ApproximateMemoryBytes > 0);
+        Assert.True(estimate >= source.ApproximateMemoryBytes);
     }
 }

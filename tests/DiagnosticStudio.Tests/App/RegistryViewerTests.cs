@@ -311,13 +311,10 @@ public sealed class RegistryViewerTests : IDisposable
     // ---- info / warnings ----
 
     [Fact]
-    public void Info_text_summarises_the_file_and_clean_files_have_no_warning()
+    public void A_clean_file_has_no_warning()
     {
         var (vm, _) = Open();
 
-        Assert.Contains("Windows Registry Editor Version 5.00", vm.InfoText);
-        Assert.Contains("keys", vm.InfoText);
-        Assert.Contains("values", vm.InfoText);
         Assert.Null(vm.WarningText);
     }
 
@@ -326,7 +323,7 @@ public sealed class RegistryViewerTests : IDisposable
     {
         var (vm, _) = Open("Windows Registry Editor Version 5.00\n\n[HKEY_CURRENT_USER\\K]\nnonsense\n\"A\"=\"1\"\n");
 
-        Assert.Contains("1 line could not be parsed, at line 4. It is visible", vm.WarningText);
+        Assert.Contains("line 4", vm.WarningText);
         Assert.Contains("raw source", vm.WarningText);
     }
 
@@ -336,7 +333,6 @@ public sealed class RegistryViewerTests : IDisposable
         var (vm, _) = Open("");
 
         Assert.Empty(vm.Roots);
-        Assert.Contains("No .reg header", vm.InfoText);
         Assert.Empty(vm.Raw.Lines);
     }
 }

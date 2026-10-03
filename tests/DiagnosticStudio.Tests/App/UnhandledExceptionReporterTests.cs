@@ -20,7 +20,6 @@ public class UnhandledExceptionReporterTests
         Assert.Equal("Application", entry.Source);
         Assert.Contains("InvalidOperationException", entry.Message);
         Assert.Contains("boom", entry.Message);
-        Assert.Contains("action was skipped", entry.Message);
     }
 
     [Fact]

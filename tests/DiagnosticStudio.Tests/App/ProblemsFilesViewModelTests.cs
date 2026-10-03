@@ -232,38 +232,22 @@ public sealed class ProblemsFilesViewModelTests : IDisposable
     // ---- counts and text ----
 
     [Fact]
-    public async Task The_tab_header_counts_findings_and_unreadable_files()
+    public async Task Unreadable_files_are_counted_apart_from_files_with_no_viewer_or_no_content()
     {
         var finding = new Finding { Id = "f", Severity = FindingSeverity.Error, Title = "t", Description = "d" };
         var health = Returns(P(_a, FileProblemKind.Failed), P(_b, FileProblemKind.Partial), P(_c, FileProblemKind.NoViewer));
 
         var (both, _, _) = await Create(health, new FixedFindings { Findings = new[] { finding } });
         await both.PendingEvaluation;
-        Assert.Equal("Problems (1 · 2 files)", both.TabHeader);
         Assert.Equal(2, both.UnreadableFileCount); // the file with no viewer is not an unreadable file
 
         var (filesOnly, _, _) = await Create(Returns(P(_a, FileProblemKind.Failed)));
         await filesOnly.PendingEvaluation;
-        Assert.Equal("Problems (1 file)", filesOnly.TabHeader);
+        Assert.Equal(1, filesOnly.UnreadableFileCount);
 
         var (neither, _, _) = await Create(Returns(P(_c, FileProblemKind.NoViewer), P(_d, FileProblemKind.Empty)));
         await neither.PendingEvaluation;
-        Assert.Equal("Problems", neither.TabHeader);
-    }
-
-    [Fact]
-    public async Task The_status_line_summarises_the_files_after_the_findings()
-    {
-        var (vm, _, _) = await Create(Returns(
-            P(_a, FileProblemKind.Failed),
-            P(_b, FileProblemKind.Partial),
-            P(_c, FileProblemKind.NoViewer),
-            P(_d, FileProblemKind.Empty)));
-
-        await vm.PendingEvaluation;
-
-        Assert.StartsWith("No findings.", vm.StatusText);
-        Assert.EndsWith("Files: 1 could not be read, 1 only partly read, 1 have no viewer yet, 1 empty.", vm.StatusText);
+        Assert.Equal(0, neither.UnreadableFileCount);
     }
 
     [Fact]

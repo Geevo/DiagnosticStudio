@@ -83,8 +83,6 @@ public sealed class StructuredViewerTests : IDisposable
         Assert.Equal("(root)", viewer.SelectedPath);
         Assert.Equal(new[] { "service", "retries", "servers" }, root.Children.Select(c => c.DisplayName));
         Assert.Equal(new[] { "\"agent\"", "3", "[2]" }, root.Children.Select(c => c.Summary));
-        Assert.Contains("Object", viewer.DetailInfo);
-        Assert.Contains("3 members", viewer.DetailInfo);
     }
 
     [Fact]

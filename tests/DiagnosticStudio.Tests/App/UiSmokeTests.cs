@@ -157,7 +157,9 @@ public sealed class UiSmokeTests
                 PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Error;
 
                 // What App.xaml sets up, without App.OnStartup (which also sweeps the machine's temp folder).
-                var app = new Application { ThemeMode = ThemeMode.System };
+                // Closing the last window would shut the Application down, and WPF then refuses to show any window
+                // for the rest of the process, which fails every other test that hosts one.
+                var app =new Application { ThemeMode = ThemeMode.System, ShutdownMode = ShutdownMode.OnExplicitShutdown };
                 foreach (var dictionary in new[] { "Theme", "Templates" })
                 {
                     app.Resources.MergedDictionaries.Add(new ResourceDictionary

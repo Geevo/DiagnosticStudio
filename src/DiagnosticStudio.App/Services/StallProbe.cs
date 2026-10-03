@@ -42,8 +42,12 @@ public sealed class StallProbe : IDisposable
     private TimeSpan _uiCpuAtStart;
     private TimeSpan _processCpuAtStart;
 
-    public StallProbe()
+    private readonly Func<Exception, bool>? _counts;
+
+    /// <param name="counts">Which exceptions to count; all of them when <c>null</c>.</param>
+    public StallProbe(Func<Exception, bool>? counts = null)
     {
+        _counts = counts;
         AppDomain.CurrentDomain.FirstChanceException += (_, e) => Record(e.Exception);
         _timer = new Timer(_ => Sample(), null, SampleInterval, SampleInterval);
     }
@@ -71,6 +75,11 @@ public sealed class StallProbe : IDisposable
     // Runs on the thread that threw, so the stack is the one that matters.
     private void Record(Exception exception)
     {
+        if (_counts is not null && !_counts(exception))
+        {
+            return;
+        }
+
         var count = Interlocked.Increment(ref _exceptions);
         var site = count <= RecordLimit ? SiteOf(exception) : exception.GetType().Name;
         _ring[(int)((count - 1) % RingSize)] = new Thrown(Stopwatch.GetTimestamp(), site);

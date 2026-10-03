@@ -113,13 +113,14 @@ public sealed class StallProbeTests
     {
         var seen = OnOwnThread(() =>
         {
-            using var probe = new StallProbe();
+            // Tests running at the same time throw exceptions of their own, which the probe sees too.
+            using var probe = new StallProbe(e => e.Message == "a few");
             probe.Beat();
             for (var i = 0; i < 5; i++)
             {
                 try
                 {
-                    throw new InvalidOperationException("x");
+                    throw new InvalidOperationException("a few");
                 }
                 catch (InvalidOperationException)
                 {

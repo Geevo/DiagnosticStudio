@@ -224,10 +224,21 @@ public sealed partial class DocumentHostViewModel : ObservableObject
         var old = preview ? Documents.FirstOrDefault(d => d.IsPreview) : null;
         if (old is not null)
         {
-            var at = Documents.IndexOf(old);
-            Documents.RemoveAt(at);
-            old.OnClosed();
-            Documents.Insert(at, document);
+            // Taking the old tab away makes the tab control select a neighbour for a moment; that is not a place the
+            // engineer went to, so it is kept out of the history.
+            var wasNavigating = _isNavigating;
+            _isNavigating = true;
+            try
+            {
+                var at = Documents.IndexOf(old);
+                Documents.RemoveAt(at);
+                old.OnClosed();
+                Documents.Insert(at, document);
+            }
+            finally
+            {
+                _isNavigating = wasNavigating;
+            }
         }
         else
         {
@@ -264,8 +275,11 @@ public sealed partial class DocumentHostViewModel : ObservableObject
         }
     }
 
-    /// <summary>Opens whatever <paramref name="location"/> points at. Viewers will scroll/select once they exist.</summary>
-    public bool OpenLocation(DiagnosticLocation location, SearchHighlight? highlight = null)
+    /// <summary>
+    /// Opens whatever <paramref name="location"/> points at. Viewers will scroll/select once they exist. With
+    /// <paramref name="preview"/> a file that is not open yet takes the preview tab's place instead of adding a kept tab.
+    /// </summary>
+    public bool OpenLocation(DiagnosticLocation location, SearchHighlight? highlight = null, bool preview = false)
     {
         if (location.Kind == DiagnosticLocationKind.Timeline)
         {
@@ -286,7 +300,7 @@ public sealed partial class DocumentHostViewModel : ObservableObject
         _isNavigating = _isNavigating || specific;
         try
         {
-            OpenArtifact(artifact);
+            OpenArtifact(artifact, preview);
         }
         finally
         {
@@ -372,7 +386,9 @@ public sealed partial class DocumentHostViewModel : ObservableObject
         _isNavigating = true;
         try
         {
-            OpenLocation(location);
+            // Back and Forward walk through places without keeping them: a file that has to be opened again takes the
+            // preview tab, and a tab that is already open (kept or preview) stays as it is.
+            OpenLocation(location, preview: true);
         }
         finally
         {

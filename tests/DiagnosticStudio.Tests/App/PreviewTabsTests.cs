@@ -121,6 +121,89 @@ public sealed class PreviewTabsTests : IDisposable
         Assert.Equal(3, host.Documents.Count);
     }
 
+    // ---- history ----
+
+    [Fact]
+    public async Task Going_back_through_previews_reuses_the_preview_tab()
+    {
+        var (host, _) = await Create();
+        host.OpenArtifact(_a, preview: true);
+        host.OpenArtifact(_b, preview: true);
+        host.OpenArtifact(_c, preview: true);
+        var count = host.Documents.Count;
+
+        host.GoBackCommand.Execute(null);
+
+        Assert.Equal(count, host.Documents.Count);
+        Assert.True(Tab(host, _b).IsPreview);
+        Assert.Same(Tab(host, _b), host.ActiveDocument);
+        Assert.DoesNotContain(host.Documents.OfType<ArtifactDocumentViewModel>(), d => d.Artifact.Id == _c.Id);
+
+        host.GoBackCommand.Execute(null);
+
+        Assert.Equal(count, host.Documents.Count);
+        Assert.True(Tab(host, _a).IsPreview);
+
+        host.GoForwardCommand.Execute(null);
+
+        Assert.Equal(count, host.Documents.Count);
+        Assert.True(Tab(host, _b).IsPreview);
+    }
+
+    [Fact]
+    public async Task Going_back_to_a_preview_tab_that_is_still_open_does_not_keep_it()
+    {
+        var (host, _) = await Create();
+        host.OpenArtifact(_a);
+        host.OpenArtifact(_b, preview: true);
+        host.OpenArtifact(_a);
+
+        host.GoBackCommand.Execute(null);
+
+        Assert.Same(Tab(host, _b), host.ActiveDocument);
+        Assert.True(Tab(host, _b).IsPreview);
+    }
+
+    [Fact]
+    public async Task Going_back_to_a_kept_tab_shows_it_and_leaves_the_preview_alone()
+    {
+        var (host, _) = await Create();
+        host.OpenArtifact(_a);
+        host.OpenArtifact(_b, preview: true);
+        host.OpenArtifact(_c, preview: true);
+
+        host.GoBackCommand.Execute(null);
+        host.GoBackCommand.Execute(null);
+
+        Assert.Same(Tab(host, _a), host.ActiveDocument);
+        Assert.False(Tab(host, _a).IsPreview);
+        Assert.True(Tab(host, _b).IsPreview);
+        Assert.Equal(3, host.Documents.Count); // overview, a, b
+    }
+
+    [Fact]
+    public async Task Replacing_the_preview_tab_leaves_no_trace_of_the_tab_the_tab_control_selected_meanwhile()
+    {
+        var (host, _) = await Create();
+        host.OpenArtifact(_a);
+        host.OpenArtifact(_b, preview: true);
+
+        // The tab control selects a neighbouring tab when the active one is removed.
+        host.Documents.CollectionChanged += (_, e) =>
+        {
+            if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Remove)
+            {
+                host.ActiveDocument = Tab(host, _a);
+            }
+        };
+
+        host.OpenArtifact(_c, preview: true);
+        host.GoBackCommand.Execute(null);
+
+        Assert.Same(Tab(host, _b), host.ActiveDocument);
+        Assert.True(Tab(host, _b).IsPreview);
+    }
+
     [Fact]
     public async Task Opening_the_previewed_file_for_real_keeps_its_tab()
     {

@@ -69,6 +69,45 @@ public sealed class TimelineHostTests : IDisposable
     }
 
     [Fact]
+    public async Task The_chosen_view_stays_current_while_files_are_opened_from_it()
+    {
+        var (host, workspace, _) = Create();
+        await Open(workspace);
+        Assert.True(host.IsOverviewActive);
+
+        host.OpenArtifact(_log);
+        Assert.True(host.IsOverviewActive);
+        Assert.False(host.IsTimelineActive);
+
+        host.ShowTimeline();
+        Assert.True(host.IsTimelineActive);
+        Assert.False(host.IsOverviewActive);
+
+        host.OpenArtifact(_evtx);
+        Assert.True(host.IsTimelineActive);
+        Assert.False(host.IsOverviewActive);
+
+        host.ShowOverview();
+        Assert.True(host.IsOverviewActive);
+        Assert.False(host.IsTimelineActive);
+    }
+
+    [Fact]
+    public async Task Closing_the_tab_of_the_current_view_clears_it()
+    {
+        var (host, workspace, _) = Create();
+        await Open(workspace);
+        var timeline = host.ShowTimeline()!;
+        host.OpenArtifact(_log);
+        Assert.True(host.IsTimelineActive);
+
+        host.CloseCommand.Execute(timeline);
+
+        Assert.False(host.IsTimelineActive);
+        Assert.False(host.IsOverviewActive);
+    }
+
+    [Fact]
     public async Task The_timeline_opens_as_a_tab_once_and_is_kept_when_the_tab_is_closed()
     {
         var (host, workspace, _) = Create();

@@ -104,7 +104,7 @@
                             <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
                         </Trigger>
                         <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
-                            <Setter TargetName="Frame" Property="Background" Value="{DynamicResource SelectedLineBrush}" />
+                            <Setter TargetName="Frame" Property="Background" Value="{DynamicResource ViewTileSelectedBrush}" />
                             <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
                         </DataTrigger>
                         <Trigger Property="IsEnabled" Value="False">

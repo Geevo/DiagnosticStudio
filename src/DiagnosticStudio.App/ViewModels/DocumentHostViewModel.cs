@@ -46,6 +46,7 @@ public sealed partial class DocumentHostViewModel : ObservableObject
             rules.OpenLocation = location => OpenLocation(location);
         }
 
+        Documents.CollectionChanged += OnDocumentsChanged;
         _workspace = workspace;
         _cache = cache;
         _timelineService = timeline;
@@ -72,15 +73,32 @@ public sealed partial class DocumentHostViewModel : ObservableObject
     [ObservableProperty]
     private DocumentViewModel? _activeDocument;
 
-    /// <summary>Whether the Overview or the Timeline tab is the one showing, so their buttons can say which view is open.</summary>
-    public bool IsOverviewActive => ActiveDocument is OverviewDocumentViewModel;
+    // The Overview or Timeline tab the engineer last chose. It stays the current view while files are opened and
+    // clicked through from it, until the other one is chosen or its tab is closed.
+    private DocumentViewModel? _currentView;
 
-    public bool IsTimelineActive => ActiveDocument is TimelineDocumentViewModel;
+    /// <summary>Whether the Overview is the current view, so its button can say which view the engineer is working from.</summary>
+    public bool IsOverviewActive => _currentView is OverviewDocumentViewModel && Documents.Contains(_currentView);
 
-    partial void OnActiveDocumentChanged(DocumentViewModel? value)
+    public bool IsTimelineActive => _currentView is TimelineDocumentViewModel && Documents.Contains(_currentView);
+
+    private void OnDocumentsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) =>
+        RaiseViewStates();
+
+    private void RaiseViewStates()
     {
         OnPropertyChanged(nameof(IsOverviewActive));
         OnPropertyChanged(nameof(IsTimelineActive));
+    }
+
+    partial void OnActiveDocumentChanged(DocumentViewModel? value)
+    {
+        if (value is OverviewDocumentViewModel or TimelineDocumentViewModel)
+        {
+            _currentView = value;
+        }
+
+        RaiseViewStates();
         if (!_isNavigating && value?.Location is { } location)
         {
             _history.Record(location);

@@ -18,6 +18,7 @@
     <SolidColorBrush x:Key="BannerBorderBrush" Color="#E3C766" />
     <SolidColorBrush x:Key="TextSelectionBrush" Color="#66339AF0" />
     <SolidColorBrush x:Key="SelectedLineBrush" Color="#CCE4F7" />
+    <SolidColorBrush x:Key="ViewTileSelectedBrush" Color="#E1EEF9" />
     <SolidColorBrush x:Key="ErrorRowBrush" Color="#F9C9C5" />
     <SolidColorBrush x:Key="WarningRowBrush" Color="#FFE98A" />
     <SolidColorBrush x:Key="FindRowBrush" Color="#B5E6BD" />

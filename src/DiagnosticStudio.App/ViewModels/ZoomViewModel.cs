@@ -77,6 +77,9 @@ public partial class ZoomViewModel : ObservableObject
     /// <summary>How long the indicator stays after the last change when the level is 100%.</summary>
     internal TimeSpan Linger { get; set; } = TimeSpan.FromSeconds(2);
 
+    /// <summary>What the wait is measured by; tests replace it to move time by hand.</summary>
+    internal TimeProvider Clock { get; set; } = TimeProvider.System;
+
     partial void OnPercentChanged(int value)
     {
         _save(value);
@@ -97,7 +100,7 @@ public partial class ZoomViewModel : ObservableObject
     {
         try
         {
-            await Task.Delay(Linger, token).ConfigureAwait(true);
+            await Task.Delay(Linger, Clock, token).ConfigureAwait(true);
         }
         catch (OperationCanceledException)
         {

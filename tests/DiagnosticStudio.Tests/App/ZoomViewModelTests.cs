@@ -169,21 +169,6 @@ public sealed class ZoomViewModelTests : IDisposable
 
     // ---- the status bar indicator ----
 
-    private static async Task<bool> BecomesAsync(Func<bool> condition, bool expected)
-    {
-        for (var i = 0; i < 100; i++)
-        {
-            if (condition() == expected)
-            {
-                return true;
-            }
-
-            await Task.Delay(20);
-        }
-
-        return condition() == expected;
-    }
-
     [Fact]
     public void The_indicator_is_hidden_at_100_percent_until_something_changes()
     {
@@ -193,7 +178,7 @@ public sealed class ZoomViewModelTests : IDisposable
     [Fact]
     public void The_indicator_stays_while_scaled()
     {
-        var zoom = new ZoomViewModel(new MemorySettings { ZoomPercent = 130 }) { Linger = TimeSpan.FromMilliseconds(30) };
+        var zoom = new ZoomViewModel(new MemorySettings { ZoomPercent = 130 });
 
         zoom.ZoomInCommand.Execute(null);
 
@@ -201,31 +186,40 @@ public sealed class ZoomViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task Returning_to_100_percent_shows_the_indicator_for_a_moment_and_then_hides_it()
+    public void Returning_to_100_percent_shows_the_indicator_for_a_moment_and_then_hides_it()
     {
-        var zoom = new ZoomViewModel(new MemorySettings { ZoomPercent = 120 }) { Linger = TimeSpan.FromMilliseconds(150) };
+        var clock = new ManualClock();
+        var zoom = new ZoomViewModel(new MemorySettings { ZoomPercent = 120 }) { Clock = clock, Linger = TimeSpan.FromSeconds(2) };
 
         zoom.ResetCommand.Execute(null);
 
         Assert.Equal("100%", zoom.Text);
         Assert.Equal("Zoom 100%", zoom.Label);
         Assert.True(zoom.IsIndicatorVisible);
-        Assert.True(await BecomesAsync(() => zoom.IsIndicatorVisible, expected: false));
+
+        clock.Advance(TimeSpan.FromMilliseconds(1999));
+        Assert.True(zoom.IsIndicatorVisible);
+
+        clock.Advance(TimeSpan.FromMilliseconds(1));
+        Assert.False(zoom.IsIndicatorVisible);
     }
 
     [Fact]
-    public async Task Each_change_restarts_the_wait()
+    public void Each_change_restarts_the_wait()
     {
-        var zoom = new ZoomViewModel(new MemorySettings { ZoomPercent = 110 }) { Linger = TimeSpan.FromMilliseconds(400) };
+        var clock = new ManualClock();
+        var zoom = new ZoomViewModel(new MemorySettings { ZoomPercent = 110 }) { Clock = clock, Linger = TimeSpan.FromSeconds(2) };
 
-        zoom.ZoomOutCommand.Execute(null);
-        await Task.Delay(250);
+        zoom.ZoomOutCommand.Execute(null);                  // 100 %
+        clock.Advance(TimeSpan.FromMilliseconds(1500));
         zoom.ZoomInCommand.Execute(null);
-        zoom.ZoomOutCommand.Execute(null);
-        await Task.Delay(250);
+        zoom.ZoomOutCommand.Execute(null);                  // 100 % again, the wait starts over
+        clock.Advance(TimeSpan.FromMilliseconds(1500));
 
-        Assert.True(zoom.IsIndicatorVisible);   // 500 ms after the first change, but only 250 after the last
-        Assert.True(await BecomesAsync(() => zoom.IsIndicatorVisible, expected: false));
+        Assert.True(zoom.IsIndicatorVisible);               // 3 s after the first change, only 1.5 s after the last
+
+        clock.Advance(TimeSpan.FromMilliseconds(500));
+        Assert.False(zoom.IsIndicatorVisible);
     }
 
     // ---- the editable box ----

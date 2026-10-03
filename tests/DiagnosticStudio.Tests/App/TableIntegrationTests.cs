@@ -255,6 +255,12 @@ public sealed class TableIntegrationTests : IDisposable
 
         await cache.LoadAsync(log, CancellationToken.None);
 
+        // The cache counts a document just after handing it to the caller.
+        for (var i = 0; i < 300 && cache.Statistics.EstimatedBytes == 0; i++)
+        {
+            await Task.Delay(20);
+        }
+
         Assert.True(cache.Statistics.EstimatedBytes >= 1000 * 24);
     }
 

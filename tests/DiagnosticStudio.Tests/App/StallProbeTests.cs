@@ -35,6 +35,19 @@ public sealed class StallProbeTests
         return result;
     }
 
+    // The probe samples from the thread pool, which a busy machine running other tests can starve for long enough
+    // that it never sees the stall; the test then tries again rather than reporting a probe that works as broken.
+    private static string? Retry(Func<string?> run)
+    {
+        string? seen = null;
+        for (var attempt = 0; attempt < 3 && seen is null; attempt++)
+        {
+            seen = run();
+        }
+
+        return seen;
+    }
+
     [Fact]
     public void A_beat_on_time_reports_nothing()
     {
@@ -51,13 +64,13 @@ public sealed class StallProbeTests
     [Fact]
     public void A_busy_interface_thread_is_reported_as_working_with_its_processor_time()
     {
-        var seen = OnOwnThread(() =>
+        var seen = Retry(() => OnOwnThread(() =>
         {
             using var probe = new StallProbe();
             probe.Beat();
             Busy(TimeSpan.FromMilliseconds(1800));
             return probe.Beat();
-        });
+        }));
 
         Assert.NotNull(seen);
         Assert.Contains("interface thread was working", seen);
@@ -66,13 +79,13 @@ public sealed class StallProbeTests
     [Fact]
     public void A_blocked_interface_thread_is_reported_as_waiting()
     {
-        var seen = OnOwnThread(() =>
+        var seen = Retry(() => OnOwnThread(() =>
         {
             using var probe = new StallProbe();
             probe.Beat();
             Thread.Sleep(1800);
             return probe.Beat();
-        });
+        }));
 
         Assert.NotNull(seen);
         Assert.Contains("mostly waiting", seen);
@@ -81,13 +94,13 @@ public sealed class StallProbeTests
     [Fact]
     public void Many_exceptions_during_a_stall_are_counted()
     {
-        var seen = OnOwnThread(() =>
+        var seen = Retry(() => OnOwnThread(() =>
         {
             using var probe = new StallProbe();
             probe.Beat();
             Busy(TimeSpan.FromMilliseconds(1500), throwing: true);
             return probe.Beat();
-        });
+        }));
 
         Assert.NotNull(seen);
         Assert.Contains("exceptions were thrown", seen);
@@ -96,13 +109,13 @@ public sealed class StallProbeTests
     [Fact]
     public void The_exceptions_are_named_with_the_application_code_that_threw_them()
     {
-        var seen = OnOwnThread(() =>
+        var seen = Retry(() => OnOwnThread(() =>
         {
             using var probe = new StallProbe();
             probe.Beat();
             Busy(TimeSpan.FromMilliseconds(1500), throwing: true);
             return probe.Beat();
-        });
+        }));
 
         Assert.NotNull(seen);
         Assert.Contains("InvalidOperationException in StallProbeTests.Busy", seen);

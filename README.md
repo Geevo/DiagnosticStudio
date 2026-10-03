@@ -1,12 +1,31 @@
 # Diagnostic Studio
 
-A Windows desktop workspace for investigating diagnostic bundles. Drop in the ZIP, CAB or folder a support collection produced and stay in one application: browse the files, read event logs, registry exports, CMTrace and plain logs, JSON, XML, HTML and ETL traces, search across all of it, and follow findings back to the exact line they came from.
+A Windows desktop workspace for reading what a support collection left behind. Built for Intune and Configuration Manager (SCCM) engineers: drop in the archive from **Collect diagnostics** on an Intune-managed device, a ConfigMgr client log folder, an MDM diagnostics folder or any ZIP or CAB, and stay in one application. Browse the files, read CMTrace and plain logs, event logs, registry exports, JSON, XML, HTML and ETL traces, search across all of it, and follow findings back to the exact line they came from.
 
 It replaces the usual round trip through File Explorer, Event Viewer, CMTrace, a registry viewer and an archive tool.
 
+![A Windows event log (.evtx) with error rows tinted and the selected event's message below](docs/images/events.png)
+
+## At a glance
+
+All of these were opened from one archive: a fictional co-managed laptop with a failing app install, plus an event log from an ordinary Windows machine.
+
+| | |
+| --- | --- |
+| ![A CMTrace log as a table: error and warning rows tinted, with the selected line's message below](docs/images/log-table.png) | ![The timeline merging every log in the archive in time order](docs/images/timeline.png) |
+| **CMTrace logs as a table.** `IntuneManagementExtension.log`, `AppEnforce.log`, `execmgr.log` and the rest, with errors and warnings tinted, a filter, find and the full message of the selected line. | **One timeline.** Every log's entries in time order, with a per-log switch and time zone. |
+| ![Search results for an exit code across the archive, with the match highlighted](docs/images/search.png) | |
+| **Search the whole archive.** Find an exit code or an error number in every file at once; each hit opens at the matching line. | |
+
+## Good for
+
+- Intune: `IntuneManagementExtension.log`, `AgentExecutor.log`, MDM diagnostics reports, enrollment registry exports, event logs from a Collect diagnostics archive.
+- Configuration Manager: client logs such as `AppEnforce.log`, `execmgr.log`, `WUAHandler.log`, `PolicyAgent.log` and `ccmsetup.log`, in CMTrace format.
+- Co-managed devices, where the answer is spread across both sets of logs and the order things happened in matters.
+
 ## What it does
 
-- **Opens a bundle as a workspace.** ZIP and CAB archives (including archives nested inside them) and plain folders. Files are extracted to a private working folder; nothing in a bundle is ever run.
+- **Opens an archive as a workspace.** ZIP and CAB archives (including archives nested inside them) and plain folders. Files are extracted to a private working folder; nothing in an archive is ever run.
 - **One viewer per kind of file.**
   - Plain logs and text: virtualised, with line numbers, wrap, text selection and a line-based selection mode.
   - CMTrace logs (`<![LOG[`…`]LOG]!>`) and CSV/TSV files: a sortable table with a detail pane; multi-line messages stay one row.
@@ -16,9 +35,9 @@ It replaces the usual round trip through File Explorer, Event Viewer, CMTrace, a
   - JSON and XML: a collapsible tree, an indented Raw view, and a partial tree with the reason when a file is cut off.
   - HTML: drawn in a locked-down WebView2 (no network, no navigation, no downloads). An optional **Allow JavaScript** box lets a page's own inline scripts run; they still cannot fetch or send anything. A Source tab always shows the original text.
 - **The raw source is always reachable.** Every parsed view has the original text behind it.
-- **Search across the bundle.** Free text plus `eventid:`, `provider:`, `level:` and `type:` filters; results stream in and open at the matching line or event.
+- **Search across the archive.** Free text plus `eventid:`, `provider:`, `level:` and `type:` filters; results stream in and open at the matching line or event.
 - **Findings.** Deterministic, evidence-backed checks (application crashes, service terminations, pending reboot, repeated log errors). Each finding lists the events or lines it rests on.
-- **Timeline.** Events and log lines from the whole bundle in time order; Ctrl+T shows the current line or event on it.
+- **Timeline.** Events and log lines from every log in the archive in time order; Ctrl+T shows the current line or event on it.
 - **Problems panel.** Files that could not be read, were only partly read, have no viewer, are empty, or opened with a caution, each with the reason and a link to the first bad line. Errors, Warnings and Messages buttons with counts show or hide each severity.
 - **Links everywhere.** Search hits, findings and timeline rows all open the source at the exact place; Back and Forward (Alt+Left / Alt+Right) retrace the steps.
 - **Light, dark or follow Windows.** File > Preferences, under the Theme heading; the choice is remembered.
@@ -29,7 +48,7 @@ It replaces the usual round trip through File Explorer, Event Viewer, CMTrace, a
 | Keys | Action |
 | --- | --- |
 | Ctrl+O / Ctrl+Shift+O | Open an archive / a folder |
-| Ctrl+Shift+F | Find in the bundle |
+| Ctrl+Shift+F | Find in all files |
 | Ctrl+T | Show the current line or event on the timeline |
 | Alt+Left / Alt+Right | Back / Forward |
 | F5 | Re-read the file from disk |
@@ -41,10 +60,10 @@ Click a file once to preview it in an italic tab that the next click replaces; d
 
 ## Safety
 
-- Bundle content is data. It is never executed, and nothing in a bundle is launched; "Open in Notepad" and "Show in File Explorer" always pass the file as an argument to the editor or Explorer.
+- The content of an archive is data. It is never executed, and nothing in it is launched; "Open in Notepad" and "Show in File Explorer" always pass the file as an argument to the editor or Explorer.
 - Archive entries are checked against path traversal before extraction.
 - A file that cannot be parsed is reported in the Problems panel and shown as raw text; it does not stop the application.
-- The only place bundle content reaches native code is the operating system's own CAB extractor and trace (ETL) reader.
+- The only place archive content reaches native code is the operating system's own CAB extractor and trace (ETL) reader.
 
 ## Build and run
 

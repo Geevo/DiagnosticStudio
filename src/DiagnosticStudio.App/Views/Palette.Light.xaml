@@ -11,7 +11,6 @@
     <SolidColorBrush x:Key="StatusBarTrackBrush" Color="#59FFFFFF" />
 
     <SolidColorBrush x:Key="ErrorTextBrush" Color="#B3261E" />
-    <SolidColorBrush x:Key="CriticalTextBrush" Color="#8B1A10" />
     <SolidColorBrush x:Key="WarningTextBrush" Color="#8A5A00" />
     <SolidColorBrush x:Key="DebugTextBrush" Color="#7A7A7A" />
     <SolidColorBrush x:Key="TimestampTextBrush" Color="#5A6E8C" />
@@ -19,7 +18,6 @@
     <SolidColorBrush x:Key="BannerBorderBrush" Color="#E3C766" />
     <SolidColorBrush x:Key="TextSelectionBrush" Color="#66339AF0" />
     <SolidColorBrush x:Key="SelectedLineBrush" Color="#CCE4F7" />
-    <SolidColorBrush x:Key="MatchLineBrush" Color="#FFF6D6" />
     <SolidColorBrush x:Key="ErrorRowBrush" Color="#F9C9C5" />
     <SolidColorBrush x:Key="WarningRowBrush" Color="#FFE98A" />
     <SolidColorBrush x:Key="FindRowBrush" Color="#B5E6BD" />

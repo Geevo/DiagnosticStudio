@@ -11,10 +11,10 @@
             <EventSetter Event="MouseDoubleClick" Handler="OnRowDoubleClick" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Severity}" Value="Error">
-                    <Setter Property="Foreground" Value="{DynamicResource ErrorTextBrush}" />
+                    <Setter Property="Background" Value="{DynamicResource ErrorRowBrush}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Severity}" Value="Warning">
-                    <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}" />
+                    <Setter Property="Background" Value="{DynamicResource WarningRowBrush}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>

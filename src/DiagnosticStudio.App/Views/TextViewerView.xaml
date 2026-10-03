@@ -42,20 +42,6 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsMatch}" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource MatchLineBrush}" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Severity}" Value="Error">
-                    <Setter Property="Foreground" Value="{DynamicResource ErrorTextBrush}" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Severity}" Value="Warning">
-                    <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Severity}" Value="Debug">
-                    <Setter Property="Foreground" Value="{DynamicResource DebugTextBrush}" />
-                </DataTrigger>
-            </Style.Triggers>
         </Style>
 
         <DataTemplate x:Key="LineTemplate" DataType="{x:Type vm:LineViewModel}">

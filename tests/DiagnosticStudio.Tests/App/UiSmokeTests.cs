@@ -162,7 +162,7 @@ public sealed class UiSmokeTests
                 {
                     app.Resources.MergedDictionaries.Add(new ResourceDictionary
                     {
-                        Source = new Uri($"pack://application:,,,/DiagnosticStudio.App;component/Views/{dictionary}.xaml"),
+                        Source = new Uri($"pack://application:,,,/DiagnosticStudio;component/Views/{dictionary}.xaml"),
                     });
                 }
 

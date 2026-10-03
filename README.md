@@ -65,16 +65,36 @@ Click a file once to preview it in an italic tab that the next click replaces; d
 - A file that cannot be parsed is reported in the Problems panel and shown as raw text; it does not stop the application.
 - The only place archive content reaches native code is the operating system's own CAB extractor and trace (ETL) reader.
 
+## Download
+
+Each [release](../../releases) has two builds of the same single-file program for 64-bit Windows. Unzip and run `DiagnosticStudio.exe`.
+
+| Download | Needs | Size |
+| --- | --- | --- |
+| `…-framework-dependent.zip` | The [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) | Small |
+| `…-self-contained.zip` | Nothing; the runtime is included | Larger |
+
+The HTML viewer needs the Microsoft Edge WebView2 runtime, which is present on current Windows 11 and Microsoft 365 installs; without it the HTML source is shown instead.
+
 ## Build and run
 
-Requires Windows 10 or later and the .NET SDK named in the solution (developed on a .NET 10 preview SDK). The HTML viewer needs the Microsoft Edge WebView2 runtime, which is present on current Windows 11 and Microsoft 365 installs; without it the HTML source is shown instead.
+Requires Windows 10 or later and the .NET 10 SDK.
 
 ```
 dotnet build DiagnosticStudio.sln
 dotnet test
 ```
 
-Run `src\DiagnosticStudio.App\bin\Debug\net10.0-windows\win-x64\DiagnosticStudio.App.exe`, optionally with the path of an archive or folder to open it straight away.
+The two release builds come from publish profiles:
+
+```
+dotnet publish src/DiagnosticStudio.App -p:PublishProfile=FrameworkDependent
+dotnet publish src/DiagnosticStudio.App -p:PublishProfile=SelfContained
+```
+
+They are written under `src\DiagnosticStudio.App\bin\publish\`. Pushing a tag such as `v1.1.0` builds both and creates the release.
+
+Run `src\DiagnosticStudio.App\bin\Debug\net10.0-windows\DiagnosticStudio.exe`, optionally with the path of an archive or folder to open it straight away.
 
 Settings (the two zoom levels and the theme) are kept in `%AppData%\DiagnosticStudio\settings.json`.
 

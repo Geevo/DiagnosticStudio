@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build
+        run: dotnet build DiagnosticStudio.sln --configuration Release --nologo
+
+      - name: Test
+        run: dotnet test DiagnosticStudio.sln --configuration Release --no-build --nologo
+
+  # Publishing has its own failure modes (single file, ready-to-run), so both kinds are built on every change.
+  publish:
+    needs: build-and-test
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [FrameworkDependent, SelfContained]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish ${{ matrix.profile }}
+        run: dotnet publish src/DiagnosticStudio.App -p:PublishProfile=${{ matrix.profile }} --nologo

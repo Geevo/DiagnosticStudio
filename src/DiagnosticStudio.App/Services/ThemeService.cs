@@ -25,8 +25,8 @@ public sealed class ThemeService : ObservableObject, IDisposable
     private const string PersonalizeKey = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
     private const string LightValue = "AppsUseLightTheme";
 
-    private static readonly Uri LightPalette = new("pack://application:,,,/DiagnosticStudio.App;component/Views/Palette.Light.xaml");
-    private static readonly Uri DarkPalette = new("pack://application:,,,/DiagnosticStudio.App;component/Views/Palette.Dark.xaml");
+    private static readonly Uri LightPalette = new("pack://application:,,,/DiagnosticStudio;component/Views/Palette.Light.xaml");
+    private static readonly Uri DarkPalette = new("pack://application:,,,/DiagnosticStudio;component/Views/Palette.Dark.xaml");
 
     private readonly Application _application;
     private readonly ISettingsStore? _settings;

@@ -29,19 +29,11 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <!-- The program is DiagnosticStudio.exe; the project and its namespaces keep the .App name. -->
+    <AssemblyName>DiagnosticStudio</AssemblyName>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <!-- ThemeMode (Fluent light/dark following Windows) is still flagged experimental by WPF. -->
     <NoWarn>$(NoWarn);WPF0001</NoWarn>
-
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <SelfContained>true</SelfContained>
-    <PublishSingleFile>true</PublishSingleFile>
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-    <PublishReadyToRun>true</PublishReadyToRun>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-    <DebugType>none</DebugType>
-    <DebugSymbols>false</DebugSymbols>
-    
   </PropertyGroup>
 
 </Project>

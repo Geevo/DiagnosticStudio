@@ -64,7 +64,6 @@ public sealed class EvtxFileTests : IDisposable
 
         Assert.Equal(("Service Control Manager", 4), (file.Providers[0].Name, file.Providers[0].Count));
         Assert.Equal(new[] { 3, 3 }, file.Providers.Skip(1).Select(p => p.Count));
-        Assert.Equal("Service Control Manager", file.Providers[0].Name);
         Assert.Equal(10, file.Providers.Sum(p => p.Count));
     }
 

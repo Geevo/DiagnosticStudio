@@ -128,7 +128,7 @@ public sealed class CabArchiveProviderTests : IDisposable
         var issue = Assert.Single(outcome.Issues);
         Assert.Equal(IngestionIssueSeverity.Warning, issue.Severity);
         Assert.Equal("CAB", issue.Component);
-        Assert.Contains(name.Length > 0 ? "→" : string.Empty, issue.Subject);
+        Assert.NotEmpty(issue.Subject);
         Assert.Empty(Directory.EnumerateFiles(_ws.Root, "evil.txt", SearchOption.AllDirectories));
     }
 

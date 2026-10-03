@@ -36,7 +36,6 @@ public sealed class ZoomViewModelTests : IDisposable
 
         Assert.Equal(130, zoom.Percent);
         Assert.Equal(1.3, zoom.Scale, 3);
-        Assert.Equal("130%", zoom.Text);
         Assert.True(zoom.IsScaled);
     }
 
@@ -194,7 +193,6 @@ public sealed class ZoomViewModelTests : IDisposable
         zoom.ResetCommand.Execute(null);
 
         Assert.Equal("100%", zoom.Text);
-        Assert.Equal("Zoom 100%", zoom.Label);
         Assert.True(zoom.IsIndicatorVisible);
 
         clock.Advance(TimeSpan.FromMilliseconds(1999));

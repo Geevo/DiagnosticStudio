@@ -261,6 +261,149 @@ public class TableViewerTests
         Assert.Equal(0, vm.SelectedRow.Position);
     }
 
+    // ---- find ----
+
+    [Fact]
+    public async Task Find_marks_the_records_that_hold_the_text_without_hiding_any()
+    {
+        var vm = Viewer();
+
+        vm.FindText = "disk";
+        await vm.PendingFind;
+
+        Assert.Equal(5, vm.Rows.Count);
+        Assert.Equal(new[] { 1, 4 }, vm.Rows.Where(r => r.IsMatch).Select(r => r.Row));
+        Assert.Equal(2, vm.FindMatchCount);
+    }
+
+    [Fact]
+    public async Task Find_lands_on_the_first_match_and_says_which_of_how_many()
+    {
+        var vm = Viewer();
+        var scrolled = new List<int>();
+        vm.ScrollRequested += (_, position) => scrolled.Add(position);
+
+        vm.FindText = "disk";
+        await vm.PendingFind;
+
+        Assert.Equal(1, vm.SelectedRow!.Row);
+        Assert.Equal("1 of 2", vm.FindStatus);
+        Assert.Equal(new[] { 1 }, scrolled);
+    }
+
+    [Fact]
+    public async Task Next_and_previous_step_through_the_matches_and_wrap_round()
+    {
+        var vm = Viewer();
+        vm.FindText = "disk";
+        await vm.PendingFind;
+
+        vm.FindNextCommand.Execute(null);
+        Assert.Equal(4, vm.SelectedRow!.Row);
+        Assert.Equal("2 of 2", vm.FindStatus);
+
+        vm.FindNextCommand.Execute(null);
+        Assert.Equal(1, vm.SelectedRow!.Row);
+
+        vm.FindPreviousCommand.Execute(null);
+        Assert.Equal(4, vm.SelectedRow!.Row);
+
+        vm.FindPreviousCommand.Execute(null);
+        Assert.Equal(1, vm.SelectedRow!.Row);
+    }
+
+    [Fact]
+    public async Task Find_starts_from_the_selected_record()
+    {
+        var vm = Viewer();
+        vm.SelectedRow = vm.Rows[2];
+
+        vm.FindText = "disk";
+        await vm.PendingFind;
+
+        Assert.Equal(4, vm.SelectedRow!.Row);
+    }
+
+    [Fact]
+    public async Task Find_can_match_case_and_sees_every_line_of_a_record()
+    {
+        var vm = Viewer();
+
+        vm.FindText = "disk";
+        vm.FindMatchCase = true;
+        await vm.PendingFind;
+        Assert.Equal(new[] { 1 }, vm.Rows.Where(r => r.IsMatch).Select(r => r.Row));
+
+        vm.FindMatchCase = false;
+        vm.FindText = "WITH BACKOFF"; // on the second line of a two-line record
+        await vm.PendingFind;
+        Assert.Equal(new[] { 2 }, vm.Rows.Where(r => r.IsMatch).Select(r => r.Row));
+    }
+
+    [Fact]
+    public async Task Find_only_steps_through_the_records_the_filter_shows()
+    {
+        var vm = Viewer();
+        vm.FindText = "agent"; // records 0, 2 and 3 (their component)
+        await vm.PendingFind;
+        Assert.Equal(3, vm.FindMatchCount);
+
+        vm.FilterText = "completed";
+        await vm.PendingFilter;
+
+        Assert.Single(vm.Rows);
+        Assert.Equal(1, vm.FindMatchCount);
+        Assert.True(vm.Rows[0].IsMatch);
+
+        vm.ClearFiltersCommand.Execute(null);
+        Assert.Equal(3, vm.FindMatchCount);
+        Assert.Equal(new[] { 0, 2, 3 }, vm.Rows.Where(r => r.IsMatch).Select(r => r.Row));
+    }
+
+    [Fact]
+    public async Task A_filter_keeps_the_marks_of_a_find_made_before_it()
+    {
+        var vm = Viewer();
+        vm.FindText = "disk";
+        await vm.PendingFind;
+
+        vm.SelectedLevel = TableViewerViewModel.LevelOptions[2]; // errors only
+        await vm.PendingFilter;
+
+        Assert.Equal(new[] { 1, 4 }, vm.Rows.Where(r => r.IsMatch).Select(r => r.Row));
+        Assert.Equal("1 of 2", vm.FindStatus); // the record the find landed on is still the selected one
+    }
+
+    [Fact]
+    public async Task Clearing_the_find_text_removes_the_marks_and_the_status()
+    {
+        var vm = Viewer();
+        vm.FindText = "disk";
+        await vm.PendingFind;
+
+        vm.FindText = string.Empty;
+        await vm.PendingFind;
+
+        Assert.DoesNotContain(vm.Rows, r => r.IsMatch);
+        Assert.Equal(0, vm.FindMatchCount);
+        Assert.Equal(string.Empty, vm.FindStatus);
+    }
+
+    [Fact]
+    public async Task A_find_that_matches_nothing_says_so_and_next_does_nothing()
+    {
+        var vm = Viewer();
+        vm.FindText = "zzz-not-there";
+        await vm.PendingFind;
+
+        vm.FindNextCommand.Execute(null);
+        vm.FindPreviousCommand.Execute(null);
+
+        Assert.Equal("No matches", vm.FindStatus);
+        Assert.Null(vm.SelectedRow);
+        Assert.Equal(5, vm.Rows.Count);
+    }
+
     // ---- links in ----
 
     [Fact]

@@ -20,5 +20,8 @@
     <SolidColorBrush x:Key="TextSelectionBrush" Color="#66339AF0" />
     <SolidColorBrush x:Key="SelectedLineBrush" Color="#CCE4F7" />
     <SolidColorBrush x:Key="MatchLineBrush" Color="#FFF6D6" />
+    <SolidColorBrush x:Key="ErrorRowBrush" Color="#F9C9C5" />
+    <SolidColorBrush x:Key="WarningRowBrush" Color="#FFE98A" />
+    <SolidColorBrush x:Key="FindRowBrush" Color="#B5E6BD" />
     <SolidColorBrush x:Key="OverlayBrush" Color="#E6FFFFFF" />
 </ResourceDictionary>

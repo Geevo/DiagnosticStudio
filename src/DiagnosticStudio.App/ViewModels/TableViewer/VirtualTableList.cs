@@ -6,12 +6,13 @@ namespace DiagnosticStudio.App.ViewModels.TableViewer;
 /// <summary>One displayed record.</summary>
 public sealed class TableRowViewModel
 {
-    public TableRowViewModel(int row, int position, TableRowData data, LogSeverity severity, object owner)
+    public TableRowViewModel(int row, int position, TableRowData data, LogSeverity severity, object owner, bool isMatch = false)
     {
         Row = row;
         Position = position;
         Data = data;
         Owner = owner;
+        IsMatch = isMatch;
         Severity = severity switch
         {
             LogSeverity.Error => "Error",
@@ -37,6 +38,9 @@ public sealed class TableRowViewModel
 
     /// <summary>Used by the grid to colour rows: <c>Error</c>, <c>Warning</c> or empty.</summary>
     public string Severity { get; }
+
+    /// <summary>True when the record holds the text being found; the grid paints the row's background.</summary>
+    public bool IsMatch { get; }
 }
 
 /// <summary>
@@ -50,14 +54,17 @@ public sealed class VirtualTableList : IList, IReadOnlyList<TableRowViewModel>
 
     private readonly ITableSource _table;
     private readonly int[]? _view;
+    private readonly int[] _matchRows;
     private readonly Dictionary<int, TableRowViewModel[]> _pages = new();
     private readonly LinkedList<int> _recent = new();
 
     /// <param name="view">Ascending record numbers to show, or <c>null</c> for every record.</param>
-    public VirtualTableList(ITableSource table, int[]? view)
+    /// <param name="matchRows">Ascending record numbers that hold the text being found, shown with a painted background.</param>
+    public VirtualTableList(ITableSource table, int[]? view, int[]? matchRows = null)
     {
         _table = table;
         _view = view;
+        _matchRows = matchRows ?? Array.Empty<int>();
     }
 
     public static VirtualTableList Empty { get; } = new(new EmptyTable(), Array.Empty<int>());
@@ -89,6 +96,22 @@ public sealed class VirtualTableList : IList, IReadOnlyList<TableRowViewModel>
 
         var at = Array.BinarySearch(_view, row);
         return at >= 0 ? at : -1;
+    }
+
+    /// <summary>Places in this list, ascending, of the records that hold the text being found.</summary>
+    public int[] MatchPositions()
+    {
+        var positions = new List<int>(_matchRows.Length);
+        foreach (var row in _matchRows)
+        {
+            var position = PositionOfRow(row);
+            if (position >= 0)
+            {
+                positions.Add(position);
+            }
+        }
+
+        return positions.ToArray();
     }
 
     private int RowAt(int position) => _view is null ? position : _view[position];
@@ -125,7 +148,8 @@ public sealed class VirtualTableList : IList, IReadOnlyList<TableRowViewModel>
             for (var k = 0; k < rows.Count; k++)
             {
                 var row = first + k;
-                page[i + k] = new TableRowViewModel(row, start + i + k, rows[k], _table.SeverityOf(row), this);
+                page[i + k] = new TableRowViewModel(
+                    row, start + i + k, rows[k], _table.SeverityOf(row), this, Array.BinarySearch(_matchRows, row) >= 0);
             }
 
             i += run;

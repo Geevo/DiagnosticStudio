@@ -83,10 +83,22 @@ public partial class TableViewerView : UserControl
             return;
         }
 
-        if (e.Key == Key.F && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        var control = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
+        if (e.Key == Key.F && control)
+        {
+            FindBox.Focus();
+            FindBox.SelectAll();
+            e.Handled = true;
+        }
+        else if (e.Key == Key.L && control)
         {
             FilterBox.Focus();
             FilterBox.SelectAll();
+            e.Handled = true;
+        }
+        else if (e.Key == Key.F3)
+        {
+            Step(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift));
             e.Handled = true;
         }
         else if (e.Key == Key.Escape && FilterBox.IsKeyboardFocused)
@@ -94,6 +106,38 @@ public partial class TableViewerView : UserControl
             _viewModel.ClearFiltersCommand.Execute(null);
             RowList.Focus();
             e.Handled = true;
+        }
+        else if (e.Key == Key.Escape && FindBox.IsKeyboardFocused)
+        {
+            _viewModel.FindText = string.Empty;
+            RowList.Focus();
+            e.Handled = true;
+        }
+    }
+
+    private void OnFindBoxKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            Step(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift));
+            e.Handled = true;
+        }
+    }
+
+    private void Step(bool backwards)
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        if (backwards)
+        {
+            _viewModel.FindPreviousCommand.Execute(null);
+        }
+        else
+        {
+            _viewModel.FindNextCommand.Execute(null);
         }
     }
 

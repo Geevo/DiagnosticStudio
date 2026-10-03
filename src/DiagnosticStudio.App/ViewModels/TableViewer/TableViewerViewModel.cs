@@ -29,8 +29,13 @@ public sealed partial class TableViewerViewModel : ObservableObject, ILocationNa
     };
 
     private CancellationTokenSource? _filterCts;
+    private CancellationTokenSource? _findCts;
     private int _run;
     private bool _quiet;
+    private bool _finding;
+    private int[]? _view;
+    private int[] _findRows = Array.Empty<int>();
+    private int[] _matchPositions = Array.Empty<int>();
 
     public TableViewerViewModel(TableDocument document)
     {
@@ -108,13 +113,31 @@ public sealed partial class TableViewerViewModel : ObservableObject, ILocationNa
     [ObservableProperty]
     private int _selectedTabIndex = TableTab;
 
+    /// <summary>Text to find: matching records get a painted background, and next/previous step through them.</summary>
+    [ObservableProperty]
+    private string _findText = string.Empty;
+
+    [ObservableProperty]
+    private bool _findMatchCase;
+
+    [ObservableProperty]
+    private string _findStatus = string.Empty;
+
     /// <summary>The filter being applied; lets callers and tests await it.</summary>
     public Task PendingFilter { get; private set; } = Task.CompletedTask;
+
+    /// <summary>The find being applied; lets callers and tests await it.</summary>
+    public Task PendingFind { get; private set; } = Task.CompletedTask;
+
+    /// <summary>How many of the records being shown hold the text being found.</summary>
+    public int FindMatchCount => _matchPositions.Length;
 
     // ---- selection ----
 
     partial void OnSelectedRowChanged(TableRowViewModel? value)
     {
+        UpdateFindStatus();
+
         if (value is null)
         {
             DetailText = string.Empty;
@@ -155,7 +178,7 @@ public sealed partial class TableViewerViewModel : ObservableObject, ILocationNa
         {
             if (text.Length == 0 && minimum == LogSeverity.None)
             {
-                Show(new VirtualTableList(Table, view: null), run);
+                Show(ListFor(null), run);
                 return;
             }
 
@@ -166,7 +189,7 @@ public sealed partial class TableViewerViewModel : ObservableObject, ILocationNa
             }
 
             var view = await Task.Run(() => Select(text, minimum, token), token).ConfigureAwait(true);
-            Show(new VirtualTableList(Table, view), run);
+            Show(ListFor(view), run);
         }
         catch (OperationCanceledException)
         {
@@ -185,25 +208,7 @@ public sealed partial class TableViewerViewModel : ObservableObject, ILocationNa
     private int[] Select(string text, LogSeverity minimum, CancellationToken token)
     {
         var count = Table.RowCount;
-        bool[]? hasText = null;
-        if (text.Length > 0)
-        {
-            hasText = new bool[count];
-            var number = 0;
-            foreach (var line in Document.RawSource.EnumerateLines())
-            {
-                number++;
-                if ((number & 0x3FFF) == 0)
-                {
-                    token.ThrowIfCancellationRequested();
-                }
-
-                if (line.Contains(text, StringComparison.OrdinalIgnoreCase) && Table.RowOfLine(number) is var row and >= 0)
-                {
-                    hasText[row] = true;
-                }
-            }
-        }
+        var hasText = text.Length > 0 ? RowsWithText(text, StringComparison.OrdinalIgnoreCase, token) : null;
 
         var view = new List<int>();
         for (var row = 0; row < count; row++)
@@ -229,6 +234,35 @@ public sealed partial class TableViewerViewModel : ObservableObject, ILocationNa
         return view.ToArray();
     }
 
+    /// <summary>Marks each record that has the text on any of its raw lines.</summary>
+    private bool[] RowsWithText(string text, StringComparison comparison, CancellationToken token)
+    {
+        var marked = new bool[Table.RowCount];
+        var number = 0;
+        foreach (var line in Document.RawSource.EnumerateLines())
+        {
+            number++;
+            if ((number & 0x3FFF) == 0)
+            {
+                token.ThrowIfCancellationRequested();
+            }
+
+            if (line.Contains(text, comparison) && Table.RowOfLine(number) is var row and >= 0)
+            {
+                marked[row] = true;
+            }
+        }
+
+        return marked;
+    }
+
+    /// <summary>A list over <paramref name="view"/> (all records when <c>null</c>) that paints the records being found.</summary>
+    private VirtualTableList ListFor(int[]? view)
+    {
+        _view = view;
+        return new VirtualTableList(Table, view, _findRows);
+    }
+
     private void Show(VirtualTableList list, int run)
     {
         if (run != _run)
@@ -239,7 +273,10 @@ public sealed partial class TableViewerViewModel : ObservableObject, ILocationNa
         var keep = SelectedRow?.Row;
         SelectedRow = null;
         Rows = list;
+        _matchPositions = list.MatchPositions();
+        OnPropertyChanged(nameof(FindMatchCount));
         UpdateStatus();
+        UpdateFindStatus();
 
         if (keep is { } row && list.PositionOfRow(row) is var position and >= 0)
         {
@@ -280,8 +317,126 @@ public sealed partial class TableViewerViewModel : ObservableObject, ILocationNa
         }
 
         IsFiltering = false;
-        Show(new VirtualTableList(Table, view: null), run);
+        Show(ListFor(null), run);
         PendingFilter = Task.CompletedTask;
+    }
+
+    // ---- find ----
+
+    partial void OnFindTextChanged(string value) => RestartFind(debounce: true);
+
+    partial void OnFindMatchCaseChanged(bool value) => RestartFind(debounce: false);
+
+    private void RestartFind(bool debounce)
+    {
+        _findCts?.Cancel();
+        _findCts?.Dispose();
+        _findCts = new CancellationTokenSource();
+        PendingFind = RunFindAsync(FindText, FindMatchCase, debounce, _findCts.Token);
+    }
+
+    private async Task RunFindAsync(string text, bool matchCase, bool debounce, CancellationToken token)
+    {
+        try
+        {
+            if (text.Length == 0)
+            {
+                _finding = false;
+                _findRows = Array.Empty<int>();
+                Show(ListFor(_view), _run);
+                return;
+            }
+
+            _finding = true;
+            FindStatus = "Searching...";
+            if (debounce)
+            {
+                await Task.Delay(FilterDebounceMilliseconds, token).ConfigureAwait(true);
+            }
+
+            var comparison = matchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+            var marked = await Task.Run(() => RowsWithText(text, comparison, token), token).ConfigureAwait(true);
+            token.ThrowIfCancellationRequested();
+
+            var rows = new List<int>();
+            for (var row = 0; row < marked.Length; row++)
+            {
+                if (marked[row])
+                {
+                    rows.Add(row);
+                }
+            }
+
+            _findRows = rows.ToArray();
+            _finding = false;
+            Show(ListFor(_view), _run);
+
+            // Land on the first match at or after the record the user is on.
+            if (_matchPositions.Length > 0)
+            {
+                var at = Array.BinarySearch(_matchPositions, SelectedRow?.Position ?? 0);
+                JumpToMatch(at >= 0 ? at : ~at >= _matchPositions.Length ? 0 : ~at);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer find owns the status text.
+        }
+    }
+
+    [RelayCommand]
+    private void FindNext()
+    {
+        if (_matchPositions.Length == 0)
+        {
+            return;
+        }
+
+        var index = Array.BinarySearch(_matchPositions, SelectedRow?.Position ?? -1);
+        var next = index >= 0 ? index + 1 : ~index;
+        JumpToMatch(next >= _matchPositions.Length ? 0 : next);
+    }
+
+    [RelayCommand]
+    private void FindPrevious()
+    {
+        if (_matchPositions.Length == 0)
+        {
+            return;
+        }
+
+        var index = Array.BinarySearch(_matchPositions, SelectedRow?.Position ?? -1);
+        var previous = (index >= 0 ? index : ~index) - 1;
+        JumpToMatch(previous < 0 ? _matchPositions.Length - 1 : previous);
+    }
+
+    private void JumpToMatch(int matchIndex) => SelectPosition(_matchPositions[matchIndex]);
+
+    private void UpdateFindStatus()
+    {
+        if (_finding)
+        {
+            return;
+        }
+
+        if (FindText.Length == 0)
+        {
+            FindStatus = string.Empty;
+            return;
+        }
+
+        if (_matchPositions.Length == 0)
+        {
+            FindStatus = "No matches";
+            return;
+        }
+
+        var culture = CultureInfo.CurrentCulture;
+        var count = _matchPositions.Length.ToString("N0", culture);
+        var at = Array.BinarySearch(_matchPositions, SelectedRow?.Position ?? -1);
+        FindStatus = at >= 0
+            ? string.Create(culture, $"{at + 1:N0} of {count}")
+            : string.Create(culture, $"{count} matching records");
     }
 
     // ---- navigation ----

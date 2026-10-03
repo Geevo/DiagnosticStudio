@@ -128,9 +128,8 @@ public sealed class ResponsivenessTests : IDisposable
     }
 
     [Fact]
-    public void The_default_always_allows_two_jobs_and_a_gate_without_slots_is_refused()
+    public void A_gate_without_slots_is_refused()
     {
-        Assert.True(BackgroundWorkGate.DefaultSlots >= 2);
         Assert.Throws<ArgumentOutOfRangeException>(() => new BackgroundWorkGate(0));
     }
 

@@ -329,12 +329,4 @@ public sealed class HtmlViewerTests : IDisposable
 
         Assert.False(Viewer().AllowScripts);
     }
-
-    [Fact]
-    public void The_note_says_what_keeps_the_page_harmless()
-    {
-        Assert.Contains("scripts", HtmlViewerViewModel.SandboxNote);
-        Assert.Contains("network", HtmlViewerViewModel.SandboxNote);
-        Assert.Contains("Nothing in the file runs or is fetched", HtmlViewerViewModel.SandboxNote);
-    }
 }

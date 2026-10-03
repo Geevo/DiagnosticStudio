@@ -87,6 +87,22 @@ Each [release](../../releases) has two builds of the same single-file program fo
 
 The HTML viewer needs the Microsoft Edge WebView2 runtime, which is present on current Windows 11 and Microsoft 365 installs; without it the HTML source is shown instead.
 
+### Verifying a download
+
+Each release also carries `SHA256SUMS.txt`. Compare a zip against it:
+
+```
+Get-FileHash .\DiagnosticStudio-v1.1.0-win-x64-self-contained.zip -Algorithm SHA256
+```
+
+The zips are built by the release workflow in this repository, which records a signed build provenance attestation for each one. To check that a zip came from that workflow, using the [GitHub CLI](https://cli.github.com/):
+
+```
+gh attestation verify .\DiagnosticStudio-v1.1.0-win-x64-self-contained.zip --repo Geevo/DiagnosticStudio
+```
+
+The program itself is not code-signed, so Windows SmartScreen may show "Unknown publisher" the first time it runs.
+
 ## Build and run
 
 Requires Windows 10 or later and the .NET 10 SDK.

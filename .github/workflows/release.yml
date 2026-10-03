@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -34,8 +36,20 @@ jobs:
             Compress-Archive -Path $exe -DestinationPath "$out/DiagnosticStudio-${{ github.ref_name }}-win-x64-$($builds[$profile]).zip"
           }
 
+      - name: Checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem release/*.zip | ForEach-Object {
+            '{0}  {1}' -f (Get-FileHash $_ -Algorithm SHA256).Hash.ToLower(), $_.Name
+          } | Set-Content -Encoding utf8NoBOM release/SHA256SUMS.txt
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: release/*.zip
+
       - name: Create release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create '${{ github.ref_name }}' (Get-ChildItem release/*.zip) --title '${{ github.ref_name }}' --generate-notes
+        run: gh release create '${{ github.ref_name }}' (Get-ChildItem release/*.zip) release/SHA256SUMS.txt --title '${{ github.ref_name }}' --generate-notes

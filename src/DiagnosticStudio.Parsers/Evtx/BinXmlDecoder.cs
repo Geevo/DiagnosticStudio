@@ -75,10 +75,13 @@ internal sealed class BinXmlDecoder
 {
     private const int MaxDepth = 64;
     private const int MaxNodesPerRecord = 50_000;
+    private const int ElementHeader = 1 + 2 + 4; // token, dependency id, data size
+    private const int CompactElementHeader = 1 + 4; // token, data size
 
     private readonly byte[] _c;
     private int _depth;
     private int _nodes;
+    private int _elementHeader = ElementHeader;
     private bool _omittedOptional;
     private List<string>? _arrayItems;
     private List<XmlElem>? _pendingSiblings;
@@ -95,6 +98,7 @@ internal sealed class BinXmlDecoder
     {
         _depth = 0;
         _nodes = 0;
+        _elementHeader = ElementHeader;
         var document = new XmlElem("#document");
         var pos = start;
         ReadNodes(ref pos, end, document, null, stopAtEndElement: false);
@@ -212,7 +216,7 @@ internal sealed class BinXmlDecoder
 
         CountNode();
         var hasAttributes = (_c[pos] & 0x40) != 0;
-        pos += 1 + 2 + 4; // token, dependency id, data size
+        pos += _elementHeader;
         var element = new XmlElem(ReadName(ref pos));
 
         if (hasAttributes)
@@ -419,6 +423,29 @@ internal sealed class BinXmlDecoder
 
     private bool Overruns(int start, int end) => start < 0 || end < start || end > _c.Length;
 
+    /// <summary>
+    /// Some providers (the certificate services client's, for one) write a nested fragment that starts straight with
+    /// an element, whose header has no dependency id: token, data size, name. Told apart by the data size, which
+    /// then spans exactly the rest of the value (one end-of-stream byte may follow) while, read the usual way, it
+    /// would not.
+    /// </summary>
+    private bool LacksDependencyId(Slot slot)
+    {
+        if (slot.Size < ElementHeader || (_c[slot.Offset] & 0x3F) != 0x01)
+        {
+            return false;
+        }
+
+        bool Spans(int sizeAt, int header)
+        {
+            var rest = (long)slot.Size - header;
+            var size = U32(sizeAt);
+            return size == rest || size == rest - 1;
+        }
+
+        return Spans(slot.Offset + 1, CompactElementHeader) && !Spans(slot.Offset + 3, ElementHeader);
+    }
+
     private Slot ReadSubstitution(ref int pos, Slot[]? subs, out bool optional)
     {
         optional = (_c[pos] & 0x3F) == 0x0E;
@@ -449,7 +476,10 @@ internal sealed class BinXmlDecoder
                 throw new EvtxFormatException("Nested fragment is too deep.");
             }
 
+            var outerHeader = _elementHeader;
+            _elementHeader = LacksDependencyId(slot) ? CompactElementHeader : ElementHeader;
             ReadNodes(ref p, slot.Offset + slot.Size, container, null, stopAtEndElement: false);
+            _elementHeader = outerHeader;
             _depth--;
             return true;
         }

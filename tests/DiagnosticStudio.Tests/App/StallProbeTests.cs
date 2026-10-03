@@ -92,4 +92,44 @@ public sealed class StallProbeTests
         Assert.NotNull(seen);
         Assert.Contains("exceptions were thrown", seen);
     }
+
+    [Fact]
+    public void The_exceptions_are_named_with_the_application_code_that_threw_them()
+    {
+        var seen = OnOwnThread(() =>
+        {
+            using var probe = new StallProbe();
+            probe.Beat();
+            Busy(TimeSpan.FromMilliseconds(1500), throwing: true);
+            return probe.Beat();
+        });
+
+        Assert.NotNull(seen);
+        Assert.Contains("InvalidOperationException in StallProbeTests.Busy", seen);
+    }
+
+    [Fact]
+    public void A_few_exceptions_are_not_worth_mentioning()
+    {
+        var seen = OnOwnThread(() =>
+        {
+            using var probe = new StallProbe();
+            probe.Beat();
+            for (var i = 0; i < 5; i++)
+            {
+                try
+                {
+                    throw new InvalidOperationException("x");
+                }
+                catch (InvalidOperationException)
+                {
+                }
+            }
+
+            Thread.Sleep(900);
+            return probe.Beat();
+        });
+
+        Assert.DoesNotContain("exceptions", seen ?? string.Empty);
+    }
 }

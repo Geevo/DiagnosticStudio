@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace DiagnosticStudio.App.Services;
@@ -8,18 +10,29 @@ namespace DiagnosticStudio.App.Services;
 /// Works out what the interface thread was doing while the window was frozen, which the freeze message alone cannot
 /// say. A separate thread watches the heartbeat the interface thread gives; once it is late it samples that thread's
 /// state, and when the heartbeat returns it reports what it saw: running (so something on that thread was busy),
-/// waiting (and what for: a disk page, a lock, another thread), how many exceptions were thrown meanwhile (each one
-/// costs far more with a debugger attached), and how much processor time the other threads took.
+/// waiting (and what for: a disk page, a lock, another thread), how many exceptions were thrown meanwhile and by
+/// what (each one costs far more with a debugger attached, which stops every thread while it handles one), and how
+/// much processor time the other threads took.
 /// </summary>
 public sealed class StallProbe : IDisposable
 {
     private static readonly TimeSpan SampleInterval = TimeSpan.FromMilliseconds(250);
     private static readonly long LateAfterTicks = Stopwatch.Frequency * 7 / 10;
+    private static readonly ConcurrentDictionary<Assembly, bool> OwnAssemblies = new();
+
+    // The most recent exceptions, with when and where. A stall is described from the ones inside it.
+    private const int RingSize = 4096;
+
+    // Past this many, exceptions are only counted: working out where one came from is not free.
+    private const int RecordLimit = 200_000;
+
+    private sealed record Thrown(long Ticks, string Site);
 
     private readonly uint _uiThreadId = GetCurrentThreadId();
     private readonly object _gate = new();
     private readonly Timer _timer;
     private readonly Dictionary<string, int> _waits = new(StringComparer.Ordinal);
+    private readonly Thrown?[] _ring = new Thrown?[RingSize];
     private long _lastBeat = Stopwatch.GetTimestamp();
     private long _exceptions;
     private bool _inStall;
@@ -31,7 +44,7 @@ public sealed class StallProbe : IDisposable
 
     public StallProbe()
     {
-        AppDomain.CurrentDomain.FirstChanceException += (_, _) => Interlocked.Increment(ref _exceptions);
+        AppDomain.CurrentDomain.FirstChanceException += (_, e) => Record(e.Exception);
         _timer = new Timer(_ => Sample(), null, SampleInterval, SampleInterval);
     }
 
@@ -43,6 +56,7 @@ public sealed class StallProbe : IDisposable
     {
         lock (_gate)
         {
+            var stallStart = _lastBeat;
             _lastBeat = Stopwatch.GetTimestamp();
             if (!_inStall)
             {
@@ -50,8 +64,66 @@ public sealed class StallProbe : IDisposable
             }
 
             _inStall = false;
-            return Describe();
+            return Describe(stallStart);
         }
+    }
+
+    // Runs on the thread that threw, so the stack is the one that matters.
+    private void Record(Exception exception)
+    {
+        var count = Interlocked.Increment(ref _exceptions);
+        var site = count <= RecordLimit ? SiteOf(exception) : exception.GetType().Name;
+        _ring[(int)((count - 1) % RingSize)] = new Thrown(Stopwatch.GetTimestamp(), site);
+    }
+
+    /// <summary>The exception type and the application code that was running when it was thrown.</summary>
+    private static string SiteOf(Exception exception)
+    {
+        var type = exception.GetType().Name;
+        try
+        {
+            MethodBase? first = null;
+            foreach (var frame in new StackTrace(skipFrames: 1, fNeedFileInfo: false).GetFrames())
+            {
+                if (frame.GetMethod() is not { DeclaringType: { } declaring } method)
+                {
+                    continue;
+                }
+
+                // The probe's own frames (this method, the handler) sit above the code that threw.
+                if (declaring == typeof(StallProbe) || declaring.DeclaringType == typeof(StallProbe))
+                {
+                    continue;
+                }
+
+                first ??= method;
+                if (OwnAssemblies.GetOrAdd(declaring.Assembly, a => a.GetName().Name?.StartsWith("DiagnosticStudio", StringComparison.Ordinal) == true))
+                {
+                    return $"{type} in {Name(method)}";
+                }
+            }
+
+            return first is null ? type : $"{type} in {Name(first)}";
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException)
+        {
+            return type;
+        }
+    }
+
+    // Lambdas and async methods live in compiler-made types and methods; show the name of the method they belong to.
+    private static string Name(MethodBase method)
+    {
+        static string Plain(string name) => name.StartsWith('<') && name.IndexOf('>') is var end and > 1 ? name[1..end] : name;
+
+        var type = method.DeclaringType!;
+        var name = method.Name == "MoveNext" ? Plain(type.Name) : Plain(method.Name);
+        while (type is { IsNested: true, DeclaringType: { } outer } && type.Name.StartsWith('<'))
+        {
+            type = outer;
+        }
+
+        return $"{type.Name}.{name}";
     }
 
     private void Sample()
@@ -126,7 +198,7 @@ public sealed class StallProbe : IDisposable
         }
     }
 
-    private string Describe()
+    private string Describe(long stallStart)
     {
         var culture = CultureInfo.CurrentCulture;
         var parts = new List<string>();
@@ -146,10 +218,16 @@ public sealed class StallProbe : IDisposable
             }
         }
 
-        var exceptions = Interlocked.Read(ref _exceptions) - _exceptionsAtStart;
-        if (exceptions > 50)
+        var thrown = _ring.Where(t => t is not null && t.Ticks >= stallStart).Select(t => t!).ToList();
+        var exceptions = Math.Max(thrown.Count, Interlocked.Read(ref _exceptions) - _exceptionsAtStart);
+
+        // A handful is nothing, unless a debugger is attached: it stops every thread for each one.
+        if (exceptions >= (Debugger.IsAttached ? 3 : 20))
         {
-            parts.Add(string.Create(culture, $"{exceptions:N0} exceptions were thrown")
+            var top = thrown.GroupBy(t => t.Site).OrderByDescending(g => g.Count()).Take(3)
+                .Select(g => string.Create(culture, $"{g.Count():N0} x {g.Key}"));
+            var where = thrown.Count == 0 ? string.Empty : $" (mostly {string.Join("; ", top)})";
+            parts.Add(string.Create(culture, $"{exceptions:N0} exceptions were thrown") + where
                 + (Debugger.IsAttached ? " with a debugger attached, which makes each one slow" : string.Empty));
         }
 

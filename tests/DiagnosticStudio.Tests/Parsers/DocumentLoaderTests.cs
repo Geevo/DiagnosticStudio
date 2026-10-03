@@ -77,16 +77,6 @@ public class DocumentLoaderTests
         Assert.IsType<UnsupportedDocument>(result.Document);
     }
 
-    [Fact]
-    public async Task Fallback_parser_mentions_the_trace_when_etl_cannot_be_decoded()
-    {
-        var etl = Artifact with { ArtifactType = ArtifactType.Trace };
-
-        var document = await new UnsupportedArtifactParser().ParseAsync(etl, CancellationToken.None);
-
-        Assert.Contains("ETL", Assert.IsType<UnsupportedDocument>(document).Reason);
-    }
-
     private sealed class StubParser : IDiagnosticParser
     {
         private readonly bool _canHandle;

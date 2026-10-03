@@ -117,7 +117,7 @@ public class StructuredFormatterTests
     }
 
     [Fact]
-    public void A_large_minified_file_formats_quickly_and_matches_the_structure_reader()
+    public void A_large_minified_file_keeps_its_structure_when_formatted()
     {
         var sb = new StringBuilder("{\"items\":[");
         for (var i = 0; i < 50_000; i++)
@@ -224,9 +224,8 @@ public class StructuredFormatterTests
     }
 
     [Fact]
-    public void The_in_memory_source_handles_empty_text_and_text_without_a_final_newline()
+    public void The_in_memory_source_reads_text_without_a_final_newline_and_a_leading_blank_line()
     {
-        Assert.Equal(0, new InMemoryTextSource(string.Empty, "t").LineCount == 1 ? 0 : 0);
         Assert.Equal(2, new InMemoryTextSource("a\nb", "t").LineCount);
         Assert.Equal(new[] { string.Empty, "x" }, new InMemoryTextSource("\nx", "t").EnumerateLines());
     }

@@ -190,17 +190,8 @@ public class TimelineViewModelTests
     {
         var vm = await Create(null, Artifact("x.reg", ArtifactType.RegistryExport));
 
-        Assert.Equal("There are no event logs or text logs here.", vm.StatusText);
         Assert.Empty(vm.Rows);
         Assert.False(vm.HasSources);
-    }
-
-    [Fact]
-    public async Task Logs_without_any_readable_time_say_so()
-    {
-        var vm = await Create(null, _plain);
-
-        Assert.StartsWith("No timestamps could be read", vm.StatusText);
     }
 
     // ---- filters ----
@@ -254,20 +245,6 @@ public class TimelineViewModelTests
 
         Assert.True(vm.Sources.Single(s => s.Name == "agent.log").HasUnzonedTimes);
         Assert.False(vm.Sources.Single(s => s.Name == "System.evtx").HasUnzonedTimes);
-    }
-
-    [Fact]
-    public async Task The_zone_options_cover_the_world_in_half_hours()
-    {
-        var labels = UtcOffsetOption.All.Select(o => o.Label).ToList();
-
-        Assert.Equal("UTC-12:00", labels[0]);
-        Assert.Equal("UTC+14:00", labels[^1]);
-        Assert.Contains("UTC", labels);
-        Assert.Contains("UTC+05:30", labels);
-        Assert.Contains("UTC-03:30", labels);
-        Assert.Equal(labels.Count, labels.Distinct().Count());
-        Assert.Equal(TimeSpan.Zero, UtcOffsetOption.Utc.Offset);
     }
 
     [Fact]

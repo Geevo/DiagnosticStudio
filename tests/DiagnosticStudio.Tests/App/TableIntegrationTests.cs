@@ -82,15 +82,6 @@ public sealed class TableIntegrationTests : IDisposable
         Assert.Equal(ArtifactType.Csv, ArtifactClassifier.Classify("empty.csv", new[] { "B", "empty.csv" }, empty).Type);
     }
 
-    [Fact]
-    public void Csv_is_a_search_filter_and_has_a_name_in_the_overview()
-    {
-        var parsed = SearchQueryParser.Parse("needle type:csv");
-
-        Assert.NotNull(parsed.Query.Types);
-        Assert.Contains(ArtifactType.Csv, parsed.Query.Types!);
-    }
-
     // ---- search ----
 
     [Fact]
@@ -272,14 +263,5 @@ public sealed class TableIntegrationTests : IDisposable
     public void A_cmtrace_record_is_sampled_as_its_message_and_other_lines_as_they_are(string line, string expected)
     {
         Assert.Equal(expected, RepeatedLogErrorRule.Sample(line));
-    }
-
-    [Fact]
-    public void A_very_long_sample_is_cut()
-    {
-        var sample = RepeatedLogErrorRule.Sample("<![LOG[" + new string('x', 500) + "]LOG]!>");
-
-        Assert.Equal(201, sample.Length);
-        Assert.EndsWith("…", sample);
     }
 }

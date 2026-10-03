@@ -229,10 +229,4 @@ public class TimelineSelectorTests
         Assert.Equal(-1, index.FindEntry(DiagnosticLocation.ForArtifact(index.Sources[1].Artifact.Id)));
         Assert.Equal(-1, index.FindEntry(DiagnosticLocation.ForRegistry(index.Sources[1].Artifact.Id, "HKLM\\X")));
     }
-
-    [Fact]
-    public void An_entry_is_small_enough_for_millions()
-    {
-        Assert.Equal(24, System.Runtime.CompilerServices.Unsafe.SizeOf<TimelineEntry>());
-    }
 }

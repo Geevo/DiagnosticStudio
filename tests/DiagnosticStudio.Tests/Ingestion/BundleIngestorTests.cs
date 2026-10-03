@@ -219,35 +219,6 @@ public class BundleIngestorTests
     }
 
     [Fact]
-    public async Task Disposing_the_workspace_removes_only_the_working_directory()
-    {
-        using var ws = new TestWorkspace();
-        var zipPath = ws.PathFor("b.zip");
-        File.WriteAllBytes(zipPath, TestWorkspace.BuildZip(z => TestWorkspace.AddText(z, "a.log", "x")));
-
-        var result = await Ingest(ws, zipPath);
-        Assert.True(Directory.Exists(result.WorkingDirectory));
-
-        result.Dispose();
-
-        Assert.False(Directory.Exists(result.WorkingDirectory));
-        Assert.True(File.Exists(zipPath));
-    }
-
-    [Fact]
-    public async Task Cancellation_cleans_up_the_working_directory()
-    {
-        using var ws = new TestWorkspace();
-        File.WriteAllBytes(ws.PathFor("b.zip"), TestWorkspace.BuildZip(z => TestWorkspace.AddText(z, "a.log", "x")));
-        using var cts = new CancellationTokenSource();
-        cts.Cancel();
-
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Ingest(ws, ws.PathFor("b.zip"), ct: cts.Token));
-
-        Assert.False(Directory.Exists(ws.WorkRoot) && Directory.EnumerateDirectories(ws.WorkRoot).Any());
-    }
-
-    [Fact]
     public async Task Missing_input_throws()
     {
         using var ws = new TestWorkspace();

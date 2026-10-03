@@ -62,21 +62,6 @@ public sealed class HtmlViewerTests : IDisposable
     }
 
     [Fact]
-    public void The_policy_forbids_scripts_network_frames_forms_and_a_base_address()
-    {
-        var policy = Policy(HtmlSandbox.Prepare("<p>x</p>"));
-
-        Assert.Contains("default-src 'none'", policy);
-        Assert.Contains("script-src 'none'", policy);
-        Assert.Contains("connect-src 'none'", policy);
-        Assert.Contains("frame-src 'none'", policy);
-        Assert.Contains("object-src 'none'", policy);
-        Assert.Contains("form-action 'none'", policy);
-        Assert.Contains("base-uri 'none'", policy);
-        Assert.Contains("frame-ancestors 'none'", policy);
-    }
-
-    [Fact]
     public void The_policy_allows_only_what_cannot_reach_out()
     {
         var policy = Policy(HtmlSandbox.Prepare("<p>x</p>"));

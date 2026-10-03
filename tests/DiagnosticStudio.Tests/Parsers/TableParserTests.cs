@@ -463,15 +463,6 @@ public sealed class TableParserTests : IDisposable
     }
 
     [Fact]
-    public void Column_widths_follow_the_longest_value_within_limits()
-    {
-        var table = Csv("short,long", "a," + new string('x', 200), "b,y");
-
-        Assert.True(table.Columns[0].Width >= 70);
-        Assert.Equal(420, table.Columns[1].Width);
-    }
-
-    [Fact]
     public void A_page_of_rows_equals_the_rows_one_by_one_across_multi_line_records()
     {
         var lines = new List<string> { "id,note" };

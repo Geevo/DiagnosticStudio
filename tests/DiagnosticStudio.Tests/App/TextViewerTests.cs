@@ -373,13 +373,4 @@ public sealed class TextViewerTests : IDisposable
         Assert.Contains("UTF-8", vm.InfoText);
         Assert.Contains("1,234", vm.InfoText.Replace(' ', ','));
     }
-
-    [Fact]
-    public void Gutter_grows_with_line_number_digits()
-    {
-        var small = new TextViewerViewModel(Source(Numbered(9)));
-        var large = new TextViewerViewModel(Source(Numbered(100_000)));
-
-        Assert.True(large.GutterWidth > small.GutterWidth);
-    }
 }

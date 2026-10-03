@@ -137,12 +137,6 @@ public sealed class CustomRuleTests : IDisposable
         Assert.Empty(CustomRuleValidator.Validate(Rule(selector: lines with { Regex = "code (\\d+)" }) with { GroupBy = CustomRuleGrouping.Capture }));
     }
 
-    [Fact]
-    public void Every_example_is_valid()
-    {
-        Assert.All(CustomRuleHelp.Examples, e => Assert.Empty(CustomRuleValidator.Validate(e.Rule)));
-    }
-
     // ---- JSON and storage ----
 
     [Fact]

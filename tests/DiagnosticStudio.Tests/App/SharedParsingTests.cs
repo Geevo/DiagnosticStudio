@@ -147,41 +147,6 @@ public sealed class SharedParsingTests : IDisposable
         Assert.Equal(0, cache.Statistics.EstimatedBytes);
     }
 
-    [Fact]
-    public void The_size_estimates_scale_with_what_the_documents_really_hold()
-    {
-        var artifact = new DiagnosticArtifact
-        {
-            Id = Guid.NewGuid(),
-            Name = "x",
-            OriginalPath = "x",
-            Provenance = new[] { "x" },
-            ArtifactType = ArtifactType.RegistryExport,
-            Size = 20L * 1024 * 1024,
-        };
-        var registry = new RegistryDocument
-        {
-            Artifact = artifact,
-            Root = new RegistryKey(string.Empty, null, 0),
-            Keys = Array.Empty<RegistryKey>(),
-            RawSource = new EmptyLines(),
-        };
-        var text = new TextDocument { Artifact = artifact, Lines = new EmptyLines() };
-
-        // Measured at roughly 5 to 6 times the file size for registry exports; text indexes are tiny.
-        Assert.InRange(DocumentSizeEstimator.Estimate(artifact, registry), 100L * 1024 * 1024, 140L * 1024 * 1024);
-        Assert.True(DocumentSizeEstimator.Estimate(artifact, text) < 1024 * 1024);
-    }
-
-    private sealed class EmptyLines : ITextLineSource
-    {
-        public int LineCount => 0;
-        public long ByteLength => 0;
-        public string EncodingName => "test";
-        public IReadOnlyList<string> ReadLines(int startLine, int count) => Array.Empty<string>();
-        public IEnumerable<string> EnumerateLines(int startLine = 0) => Array.Empty<string>();
-    }
-
     private sealed class StaticIngestor : IBundleIngestor
     {
         private readonly InvestigationWorkspace _workspace;

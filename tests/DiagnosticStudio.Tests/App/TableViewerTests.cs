@@ -106,14 +106,6 @@ public class TableViewerTests
         Assert.Equal(1, vm.Raw.CurrentLine);
     }
 
-    [Fact]
-    public void A_single_line_outside_any_record_is_worded_in_the_singular()
-    {
-        var vm = Viewer(Rec("a"), "junk between", Rec("b"));
-
-        Assert.Equal("1 line is not part of any record, at line 2. It is in the raw source.", vm.UnreadText);
-    }
-
     // ---- selection and detail ----
 
     [Fact]

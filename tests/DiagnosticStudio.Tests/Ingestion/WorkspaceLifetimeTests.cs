@@ -182,6 +182,41 @@ public sealed class WorkspaceLifetimeTests : IDisposable
         Assert.True(File.Exists(Path.Combine(_root, "loose-file.txt")));
     }
 
+    // ---- survey ----
+
+    [Fact]
+    public void A_survey_counts_what_a_sweep_would_remove_and_removes_nothing()
+    {
+        var a = Orphan();
+        var b = Orphan();
+        File.WriteAllBytes(Path.Combine(a, "a0001", "big.bin"), new byte[1000]);
+
+        var survey = WorkspaceJanitor.Survey(_root);
+
+        Assert.Equal(2, survey.Stale);
+        Assert.Equal(1000 + 2, survey.Bytes); // the two one-byte agent.log files
+        Assert.True(Directory.Exists(a));
+        Assert.True(Directory.Exists(b));
+    }
+
+    [Fact]
+    public void A_survey_leaves_out_workspaces_that_are_in_use_young_or_not_ours()
+    {
+        using var live = WorkspaceLease.Create(Path.Combine(_root, NewName()));
+        Orphan(withLease: false);
+        Directory.CreateDirectory(Path.Combine(_root, "MyDocuments"));
+
+        var survey = WorkspaceJanitor.Survey(_root);
+
+        Assert.Equal(WorkspaceSurvey.None, survey);
+    }
+
+    [Fact]
+    public void A_survey_of_a_missing_root_finds_nothing()
+    {
+        Assert.Equal(WorkspaceSurvey.None, WorkspaceJanitor.Survey(Path.Combine(_root, "does-not-exist")));
+    }
+
     [Fact]
     public void A_directory_that_cannot_be_removed_is_reported_and_the_sweep_continues()
     {

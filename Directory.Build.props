@@ -6,5 +6,6 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Deterministic>true</Deterministic>
     <Version>1.1.1</Version>
+    <RepositoryUrl>https://github.com/Geevo/DiagnosticStudio</RepositoryUrl>
   </PropertyGroup>
 </Project>

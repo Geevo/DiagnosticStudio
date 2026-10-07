@@ -1,0 +1,44 @@
+<Window x:Class="DiagnosticStudio.App.Views.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:about="clr-namespace:DiagnosticStudio.App.ViewModels.About"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=about:AboutViewModel}"
+        Title="About Diagnostic Studio" Icon="../Assets/app.ico"
+        Width="460" SizeToContent="Height" ResizeMode="NoResize" ShowInTaskbar="False"
+        WindowStartupLocation="CenterScreen"
+        FontFamily="Segoe UI" FontSize="12" Background="{DynamicResource WindowBrush}">
+
+    <StackPanel Margin="28,24,28,20">
+        <StackPanel Orientation="Horizontal">
+            <Image x:Name="Logo" Width="64" Height="64" RenderOptions.BitmapScalingMode="HighQuality" />
+            <StackPanel Margin="18,0,0,0" VerticalAlignment="Center">
+                <TextBlock Text="{Binding Name}" FontSize="22" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding VersionText}" Margin="0,2,0,0" Foreground="{DynamicResource MutedTextBrush}" />
+            </StackPanel>
+        </StackPanel>
+
+        <TextBlock Text="Source code" Margin="0,22,0,2" Foreground="{DynamicResource MutedTextBrush}" />
+        <TextBlock>
+            <Hyperlink NavigateUri="{Binding RepositoryUrl}" RequestNavigate="OnRequestNavigate">
+                <Run Text="{Binding RepositoryUrl, Mode=OneWay}" />
+            </Hyperlink>
+        </TextBlock>
+
+        <Border Margin="0,22,0,0" Padding="0,14,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
+            <StackPanel>
+                <TextBlock Text="Extracted archives" FontWeight="SemiBold" />
+                <TextBlock Text="An open archive is unpacked to a working folder and removed when it is closed. A crash can leave one behind."
+                           TextWrapping="Wrap" Margin="0,4,0,0" Foreground="{DynamicResource MutedTextBrush}" />
+                <TextBlock Text="{Binding CleanupText}" TextWrapping="Wrap" Margin="0,10,0,0" />
+                <Button Content="Clear leftover archives" Command="{Binding ClearStaleCommand}"
+                        HorizontalAlignment="Left" Padding="12,3" Margin="0,10,0,0" />
+            </StackPanel>
+        </Border>
+
+        <Button Content="Close" IsCancel="True" IsDefault="True" HorizontalAlignment="Right"
+                Padding="18,3" Margin="0,22,0,0" Click="OnCloseClick" />
+    </StackPanel>
+</Window>

@@ -15,6 +15,7 @@ public enum BottomPanelTab
 public sealed partial class MainWindowViewModel : ObservableObject
 {
     private readonly IFileDialogService _dialogs;
+    private readonly IAboutDialogService _about;
 
     public MainWindowViewModel(
         WorkspaceViewModel workspace,
@@ -27,7 +28,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ZoomViewModel zoom,
         ContentZoomViewModel contentZoom,
         ThemeService theme,
-        IFileDialogService dialogs)
+        IFileDialogService dialogs,
+        IAboutDialogService about)
     {
         Workspace = workspace;
         Explorer = explorer;
@@ -40,6 +42,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ContentZoom = contentZoom;
         Theme = theme;
         _dialogs = dialogs;
+        _about = about;
 
         // A new search brings the results panel forward.
         SearchResults.SearchStarted += (_, _) => SelectedBottomTabIndex = (int)BottomPanelTab.SearchResults;
@@ -91,6 +94,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private Task OpenPath(string? path) =>
         string.IsNullOrWhiteSpace(path) ? Task.CompletedTask : Workspace.OpenAsync(path);
+
+    [RelayCommand]
+    private void ShowAbout() => _about.Show();
 
     [RelayCommand]
     private void CloseBundle() => Workspace.Close();

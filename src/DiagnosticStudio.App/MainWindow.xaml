@@ -167,6 +167,9 @@
                 <MenuItem Header="Close _Others" Command="{Binding Documents.CloseOthersCommand}" />
                 <MenuItem Header="Close _All" Command="{Binding Documents.CloseAllCommand}" />
             </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="_About Diagnostic Studio" Command="{Binding ShowAboutCommand}" />
+            </MenuItem>
         </Menu>
 
         <!-- Toolbar / global search -->

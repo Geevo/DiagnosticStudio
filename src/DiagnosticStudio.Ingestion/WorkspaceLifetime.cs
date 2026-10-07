@@ -91,6 +91,12 @@ public sealed record WorkspaceSweepResult(int Removed, int InUse, int Failed, IR
     public static WorkspaceSweepResult None { get; } = new(0, 0, 0, Array.Empty<string>());
 }
 
+/// <summary>What <see cref="WorkspaceJanitor.Survey"/> found: abandoned working directories and the disk they take.</summary>
+public sealed record WorkspaceSurvey(int Stale, long Bytes)
+{
+    public static WorkspaceSurvey None { get; } = new(0, 0);
+}
+
 /// <summary>
 /// Removes working directories orphaned by a crashed or killed instance. A directory is only removed when
 /// its lease can be taken (nobody owns it) or, for directories that have no lease at all, when it is old enough
@@ -106,6 +112,92 @@ public static class WorkspaceJanitor
         CancellationToken cancellationToken = default,
         DateTime? utcNow = null) =>
         Task.Run(() => SweepStale(root, cancellationToken, utcNow), cancellationToken);
+
+    public static Task<WorkspaceSurvey> SurveyAsync(
+        string? root = null,
+        CancellationToken cancellationToken = default,
+        DateTime? utcNow = null) =>
+        Task.Run(() => Survey(root, cancellationToken, utcNow), cancellationToken);
+
+    /// <summary>
+    /// Counts what <see cref="SweepStale(string?, CancellationToken, DateTime?)"/> would remove, without removing it.
+    /// Uses the same test for "abandoned", so a directory a running instance owns is never counted.
+    /// </summary>
+    public static WorkspaceSurvey Survey(string? root = null, CancellationToken cancellationToken = default, DateTime? utcNow = null)
+    {
+        root ??= WorkspaceLocations.DefaultRoot;
+        if (!Directory.Exists(root))
+        {
+            return WorkspaceSurvey.None;
+        }
+
+        var now = utcNow ?? DateTime.UtcNow;
+        int stale = 0;
+        long bytes = 0;
+        try
+        {
+            foreach (var directory in Directory.EnumerateDirectories(root).ToList())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var info = new DirectoryInfo(directory);
+                if (!WorkspaceLocations.IsWorkspaceDirectoryName(info.Name)
+                    || info.Attributes.HasFlag(FileAttributes.ReparsePoint)
+                    || !IsAbandoned(info, now))
+                {
+                    continue;
+                }
+
+                stale++;
+                bytes += SizeOf(info, cancellationToken);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Report what was counted so far; a sweep says what it could not remove.
+        }
+
+        return new WorkspaceSurvey(stale, bytes);
+    }
+
+    private static bool IsAbandoned(DirectoryInfo directory, DateTime utcNow)
+    {
+        var leasePath = Path.Combine(directory.FullName, WorkspaceLocations.LeaseFileName);
+        if (!File.Exists(leasePath))
+        {
+            return utcNow - directory.LastWriteTimeUtc >= LeaselessGrace;
+        }
+
+        try
+        {
+            using var lease = new FileStream(leasePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    private static long SizeOf(DirectoryInfo directory, CancellationToken cancellationToken)
+    {
+        long total = 0;
+        var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint };
+        foreach (var file in directory.EnumerateFiles("*", options))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                total += file.Length;
+            }
+            catch (IOException)
+            {
+                // Gone since it was listed.
+            }
+        }
+
+        return total;
+    }
 
     public static WorkspaceSweepResult SweepStale(
         string? root = null,

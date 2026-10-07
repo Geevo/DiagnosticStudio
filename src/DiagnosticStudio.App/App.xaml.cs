@@ -148,6 +148,9 @@ public partial class App : Application
 
         // Application services.
         services.AddSingleton<IFileDialogService, FileDialogService>();
+        services.AddSingleton(AppInfo.FromAssembly(typeof(App).Assembly));
+        services.AddSingleton<IStaleWorkspaceCleanup, StaleWorkspaceCleanup>();
+        services.AddSingleton<IAboutDialogService, AboutDialogService>();
         services.AddSingleton<IExternalToolService, ExternalToolService>();
         services.AddSingleton<IClipboardService, ClipboardService>();
         services.AddSingleton<ISettingsStore, FileSettingsStore>();

@@ -35,6 +35,9 @@ public sealed partial class EventLogViewerViewModel : ObservableObject, ILocatio
     public DiagnosticLocation? CurrentPosition(Guid artifactId) =>
         SelectedEvent is { } selected ? DiagnosticLocation.ForEventRecord(artifactId, selected.RecordId) : null;
 
+    /// <summary>Up to this many events a sort is quick enough to do on the UI thread without a progress state.</summary>
+    private const int SortInlineLimit = 50_000;
+
     private CancellationTokenSource? _filterCts;
     private bool _suppressFilter;
 
@@ -234,9 +237,14 @@ public sealed partial class EventLogViewerViewModel : ObservableObject, ILocatio
             return null;
         }
 
+        var column = SortColumn;
+        if ((view?.Length ?? Source.Count) <= SortInlineLimit)
+        {
+            return EventSort.Order(Source, view, column, token);
+        }
+
         IsFiltering = true;
         StatusText = "Sorting...";
-        var column = SortColumn;
         return await Task.Run(() => EventSort.Order(Source, view, column, token), token).ConfigureAwait(true);
     }
 

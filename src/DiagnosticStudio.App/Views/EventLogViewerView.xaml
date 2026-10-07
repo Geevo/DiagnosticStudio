@@ -83,7 +83,6 @@
                     <ToggleButton Content="Aa" Margin="4,0,0,0" Padding="6,2" IsChecked="{Binding MatchCase}" ToolTip="Match case" />
                     <CheckBox Content="Include messages" Margin="8,0,0,0" VerticalAlignment="Center" IsChecked="{Binding IncludeMessage}"
                               ToolTip="Also search message text. Slower: each event's message is rendered from provider metadata, which takes several times longer than searching data values alone." />
-                    <CheckBox Content="Newest first" Margin="10,0,0,0" VerticalAlignment="Center" IsChecked="{Binding NewestFirst}" />
                     <Button Content="Clear filters" Margin="10,0,0,0" Padding="8,2" Command="{Binding ClearFiltersCommand}" />
                 </WrapPanel>
             </DockPanel>
@@ -107,14 +106,15 @@
                           SelectedItem="{Binding SelectedEvent, Mode=TwoWay}" SelectionMode="Single"
                           ItemContainerStyle="{StaticResource EventRowStyle}" BorderThickness="0"
                           VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
-                          VirtualizingPanel.ScrollUnit="Item" ScrollViewer.CanContentScroll="True">
+                          VirtualizingPanel.ScrollUnit="Item" ScrollViewer.CanContentScroll="True"
+                          GridViewColumnHeader.Click="OnColumnHeaderClick">
                     <ListView.View>
                         <GridView>
-                            <GridViewColumn Header="Time (UTC)" Width="170" DisplayMemberBinding="{Binding TimeText}" />
-                            <GridViewColumn Header="Level" Width="95" DisplayMemberBinding="{Binding LevelName}" />
-                            <GridViewColumn Header="Provider" Width="230" DisplayMemberBinding="{Binding Provider}" />
-                            <GridViewColumn Header="Event ID" Width="75" DisplayMemberBinding="{Binding EventId}" />
-                            <GridViewColumn Header="Record" Width="80" DisplayMemberBinding="{Binding RecordId}" />
+                            <GridViewColumn x:Name="TimeColumn" Header="Time (UTC)" Width="170" DisplayMemberBinding="{Binding TimeText}" />
+                            <GridViewColumn x:Name="LevelColumn" Header="Level" Width="95" DisplayMemberBinding="{Binding LevelName}" />
+                            <GridViewColumn x:Name="ProviderColumn" Header="Provider" Width="230" DisplayMemberBinding="{Binding Provider}" />
+                            <GridViewColumn x:Name="EventIdColumn" Header="Event ID" Width="75" DisplayMemberBinding="{Binding EventId}" />
+                            <GridViewColumn x:Name="RecordColumn" Header="Record" Width="80" DisplayMemberBinding="{Binding RecordId}" />
                             <GridViewColumn Header="Message" Width="900">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate DataType="{x:Type ev:EventRowViewModel}">

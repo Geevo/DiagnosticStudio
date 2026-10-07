@@ -48,7 +48,7 @@ public sealed partial class EventLogViewerViewModel : ObservableObject, ILocatio
         Source = document.Source;
         _selectedLevel = LevelOptions[0];
         _selectedProvider = AllProviders;
-        _events = new VirtualEventList(Source, null, newestFirst: false);
+        _events = new VirtualEventList(Source, null, SortDescending, EventSort.Order(Source, null, SortColumn));
 
         ProviderOptions = new[] { AllProviders }
             .Concat(Source.Providers.Select(p => new ProviderOption(p.Id, $"{p.Name} ({p.Count:N0})")))
@@ -106,8 +106,12 @@ public sealed partial class EventLogViewerViewModel : ObservableObject, ILocatio
     [ObservableProperty]
     private bool _includeMessage;
 
+    /// <summary>The column the table is sorted by; the newest events first until a header is clicked.</summary>
     [ObservableProperty]
-    private bool _newestFirst;
+    private EventSortColumn _sortColumn = EventSortColumn.Time;
+
+    [ObservableProperty]
+    private bool _sortDescending = true;
 
     [ObservableProperty]
     private string _statusText = string.Empty;
@@ -146,7 +150,9 @@ public sealed partial class EventLogViewerViewModel : ObservableObject, ILocatio
         }
     }
 
-    partial void OnNewestFirstChanged(bool value) => RestartFilter(debounce: false);
+    partial void OnSortColumnChanged(EventSortColumn value) => RestartFilter(debounce: false);
+
+    partial void OnSortDescendingChanged(bool value) => RestartFilter(debounce: false);
 
     partial void OnSelectedEventChanged(EventRowViewModel? value) =>
         SelectedDetail = value is null ? null : new EventDetailViewModel(Source.ReadDetail(value.EventIndex));
@@ -204,7 +210,9 @@ public sealed partial class EventLogViewerViewModel : ObservableObject, ILocatio
                 token.ThrowIfCancellationRequested();
             }
 
-            ShowView(view, view?.Length ?? Source.Count);
+            var order = await OrderAsync(view, token).ConfigureAwait(true);
+            token.ThrowIfCancellationRequested();
+            ShowView(view, view?.Length ?? Source.Count, order);
         }
         catch (OperationCanceledException)
         {
@@ -219,10 +227,23 @@ public sealed partial class EventLogViewerViewModel : ObservableObject, ILocatio
         }
     }
 
-    private void ShowView(int[]? view, int shown)
+    private async Task<int[]?> OrderAsync(int[]? view, CancellationToken token)
+    {
+        if (SortColumn == EventSortColumn.Record)
+        {
+            return null;
+        }
+
+        IsFiltering = true;
+        StatusText = "Sorting...";
+        var column = SortColumn;
+        return await Task.Run(() => EventSort.Order(Source, view, column, token), token).ConfigureAwait(true);
+    }
+
+    private void ShowView(int[]? view, int shown, int[]? order)
     {
         var keep = SelectedEvent?.RecordId;
-        Events = new VirtualEventList(Source, view, NewestFirst);
+        Events = new VirtualEventList(Source, view, SortDescending, order);
         UpdateStatus(view is not null, shown);
 
         SelectedEvent = null;
@@ -259,7 +280,31 @@ public sealed partial class EventLogViewerViewModel : ObservableObject, ILocatio
         EventIdError = null;
         IsFiltering = false;
         OnPropertyChanged(nameof(HasActiveFilter));
-        ShowView(null, Source.Count);
+        ShowView(null, Source.Count, EventSort.Order(Source, null, SortColumn));
+    }
+
+    /// <summary>Header click: sort by this column, or reverse the order when it is already the sort column.</summary>
+    public void SortBy(EventSortColumn column)
+    {
+        _suppressFilter = true;
+        try
+        {
+            if (column == SortColumn)
+            {
+                SortDescending = !SortDescending;
+            }
+            else
+            {
+                SortColumn = column;
+                SortDescending = column == EventSortColumn.Time;
+            }
+        }
+        finally
+        {
+            _suppressFilter = false;
+        }
+
+        RestartFilter(debounce: false);
     }
 
     // ---- navigation ----

@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -21,6 +22,7 @@ public partial class EventLogViewerView : UserControl
         if (_viewModel is not null)
         {
             _viewModel.ScrollToRowRequested -= OnScrollToRowRequested;
+            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
         }
 
         _viewModel = e.NewValue as EventLogViewerViewModel;
@@ -30,11 +32,61 @@ public partial class EventLogViewerView : UserControl
         }
 
         _viewModel.ScrollToRowRequested += OnScrollToRowRequested;
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        UpdateColumnHeaders();
 
         // The tab's content is recreated when switching tabs; bring the selection back into view.
         if (_viewModel.SelectedEvent is { } selected && _viewModel.Events.RowOfEvent(selected.EventIndex) is var row and >= 0)
         {
             Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => ScrollToRow(row));
+        }
+    }
+
+    private IEnumerable<(GridViewColumn Column, string Title, EventSortColumn Sort)> SortableColumns()
+    {
+        yield return (TimeColumn, "Time (UTC)", EventSortColumn.Time);
+        yield return (LevelColumn, "Level", EventSortColumn.Level);
+        yield return (ProviderColumn, "Provider", EventSortColumn.Provider);
+        yield return (EventIdColumn, "Event ID", EventSortColumn.EventId);
+        yield return (RecordColumn, "Record", EventSortColumn.Record);
+    }
+
+    private void OnColumnHeaderClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel is null || e.OriginalSource is not GridViewColumnHeader { Column: { } column })
+        {
+            return;
+        }
+
+        foreach (var (candidate, _, sort) in SortableColumns())
+        {
+            if (candidate == column)
+            {
+                _viewModel.SortBy(sort);
+                return;
+            }
+        }
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(EventLogViewerViewModel.SortColumn) or nameof(EventLogViewerViewModel.SortDescending))
+        {
+            UpdateColumnHeaders();
+        }
+    }
+
+    /// <summary>Marks the sort column's header with an arrow: up for ascending, down for descending.</summary>
+    private void UpdateColumnHeaders()
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        foreach (var (column, title, sort) in SortableColumns())
+        {
+            column.Header = sort != _viewModel.SortColumn ? title : title + (_viewModel.SortDescending ? " \u25BC" : " \u25B2");
         }
     }
 

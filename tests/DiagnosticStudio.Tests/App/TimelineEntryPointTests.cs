@@ -98,7 +98,7 @@ public sealed class TimelineEntryPointTests : IDisposable
 
         Assert.Null(viewer.CurrentPosition(_evtx.Id));
 
-        viewer.SelectedEvent = viewer.Events[1];
+        viewer.SelectedEvent = viewer.Events[0]; // newest first
 
         Assert.Equal(DiagnosticLocation.ForEventRecord(_evtx.Id, 1001), viewer.CurrentPosition(_evtx.Id));
     }
@@ -127,7 +127,7 @@ public sealed class TimelineEntryPointTests : IDisposable
         host.OpenArtifact(_evtx);
         var document = await Loaded(host, _evtx);
         var viewer = (EventLogViewerViewModel)document.Viewer!;
-        viewer.SelectedEvent = viewer.Events[1];
+        viewer.SelectedEvent = viewer.Events[0]; // newest first
 
         await host.ShowActiveInTimelineAsync();
 

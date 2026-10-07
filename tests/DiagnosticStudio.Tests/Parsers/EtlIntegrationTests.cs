@@ -46,7 +46,7 @@ public sealed class EtlIntegrationTests
 
         Assert.Equal(4, vm.Events.Count);
         Assert.Contains("Only the first 3 are shown.", vm.WarningText);
-        Assert.Contains("ClrInstanceID", vm.Events[2].MessagePreview);
+        Assert.Contains("ClrInstanceID", vm.Events[1].MessagePreview);
         Assert.Contains(vm.ProviderOptions, p => p.Label.StartsWith("Microsoft-Windows-DotNETRuntime"));
     }
 

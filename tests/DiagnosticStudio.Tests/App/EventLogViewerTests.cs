@@ -27,7 +27,7 @@ public sealed class EventLogViewerTests : IDisposable
         new(106, "Service Control Manager", 7036, EventLevels.Verbose, T0.AddSeconds(6), "PC", "Windows Update", "stopped"),
     };
 
-    private (EventLogViewerViewModel Vm, EvtxFile File) Open(IReadOnlyList<TestEvent>? events = null, IEventMessageFormatter? formatter = null, bool dirty = false)
+    private (EventLogViewerViewModel Vm, EvtxFile File) Open(IReadOnlyList<TestEvent>? events = null, IEventMessageFormatter? formatter = null, bool dirty = false, bool? sortDescending = false)
     {
         var path = Path.Combine(_dir, Guid.NewGuid().ToString("N") + ".evtx");
         File.WriteAllBytes(path, new EvtxBuilder().Build(events ?? Sample, dirty));
@@ -47,7 +47,13 @@ public sealed class EventLogViewerTests : IDisposable
             TotalIssueCount = file.TotalIssueCount,
             IsDirty = file.IsDirty,
         };
-        return (new EventLogViewerViewModel(doc), file);
+        var vm = new EventLogViewerViewModel(doc);
+        if (sortDescending is { } descending)
+        {
+            vm.SortDescending = descending;
+        }
+
+        return (vm, file);
     }
 
     private static async Task Settle(EventLogViewerViewModel vm) => await vm.PendingFilter;
@@ -210,16 +216,72 @@ public sealed class EventLogViewerTests : IDisposable
     }
 
     [Fact]
-    public async Task Newest_first_reverses_the_rows()
+    public void Events_are_shown_newest_first_by_default()
     {
-        var (vm, _) = Open();
+        var (vm, _) = Open(sortDescending: null);
 
-        vm.NewestFirst = true;
-        await Settle(vm);
-
+        Assert.Equal(EventSortColumn.Time, vm.SortColumn);
+        Assert.True(vm.SortDescending);
         Assert.Equal(new long[] { 106, 105, 104, 103, 102, 101, 100 }, Shown(vm));
         Assert.Equal(6, vm.Events.RowOfEvent(0));
         Assert.Equal(0, vm.Events.RowOfEvent(6));
+    }
+
+    [Fact]
+    public async Task Clicking_the_sorted_column_again_reverses_it()
+    {
+        var (vm, _) = Open(sortDescending: null);
+
+        vm.SortBy(EventSortColumn.Time);
+        await Settle(vm);
+
+        Assert.False(vm.SortDescending);
+        Assert.Equal(new long[] { 100, 101, 102, 103, 104, 105, 106 }, Shown(vm));
+    }
+
+    [Fact]
+    public async Task Sorting_by_provider_orders_by_name_and_keeps_log_order_within_a_provider()
+    {
+        var (vm, _) = Open();
+
+        vm.SortBy(EventSortColumn.Provider);
+        await Settle(vm);
+
+        Assert.Equal(new long[] { 102, 105, 103, 104, 100, 101, 106 }, Shown(vm));
+        Assert.Equal(4, vm.Events.RowOfEvent(0));
+
+        vm.SortBy(EventSortColumn.Provider);
+        await Settle(vm);
+
+        Assert.Equal(new long[] { 106, 101, 100, 104, 103, 105, 102 }, Shown(vm));
+    }
+
+    [Fact]
+    public async Task Sorting_by_event_id_or_level_orders_by_that_value()
+    {
+        var (vm, _) = Open();
+
+        vm.SortBy(EventSortColumn.EventId);
+        await Settle(vm);
+        Assert.Equal(new long[] { 105, 102, 101, 100, 106, 103, 104 }, Shown(vm));
+
+        vm.SortBy(EventSortColumn.Level); // critical and errors first
+        await Settle(vm);
+        Assert.Equal(new long[] { 101, 102, 103, 104, 100, 105, 106 }, Shown(vm));
+    }
+
+    [Fact]
+    public async Task The_sort_applies_to_a_filtered_view_and_the_selection_follows_it()
+    {
+        var (vm, _) = Open();
+        vm.SelectedEvent = vm.Events[3]; // record 103
+
+        vm.SortBy(EventSortColumn.EventId);
+        vm.SelectedLevel = EventLogViewerViewModel.LevelOptions.Single(o => o.Label == "Error or worse");
+        await Settle(vm);
+
+        Assert.Equal(new long[] { 102, 101, 103 }, Shown(vm));
+        Assert.Equal(103, vm.SelectedEvent!.RecordId);
     }
 
     // ---- selection ----
@@ -412,7 +474,7 @@ public sealed class EventLogViewerTests : IDisposable
             TotalIssueCount = file.TotalIssueCount,
         };
 
-        var vm = new EventLogViewerViewModel(doc);
+        var vm = new EventLogViewerViewModel(doc) { SortDescending = false };
 
         Assert.Equal(7, vm.Events.Count);
         Assert.Equal("(record could not be decoded)", vm.Events[2].MessagePreview);

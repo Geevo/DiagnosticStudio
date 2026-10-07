@@ -14,19 +14,27 @@ public sealed class VirtualEventList : IList, IReadOnlyList<EventRowViewModel>
 
     private readonly IEventLogSource _source;
     private readonly int[]? _view;
+    private readonly int[]? _order;
     private readonly bool _newestFirst;
+    private int[]? _positionOfEvent;
     private readonly Dictionary<int, EventRowViewModel[]> _pages = new();
     private readonly LinkedList<int> _recent = new();
 
     /// <param name="view">Ascending event indices to show, or <c>null</c> for every event.</param>
-    public VirtualEventList(IEventLogSource source, int[]? view, bool newestFirst)
+    /// <param name="newestFirst">Show the last of the rows first.</param>
+    /// <param name="order">
+    /// The events of <paramref name="view"/> in the order to show them (before <paramref name="newestFirst"/> reverses
+    /// it), or <c>null</c> for the order of <paramref name="view"/>.
+    /// </param>
+    public VirtualEventList(IEventLogSource source, int[]? view, bool newestFirst, int[]? order = null)
     {
         _source = source;
         _view = view;
         _newestFirst = newestFirst;
+        _order = order;
     }
 
-    public int Count => _view?.Length ?? _source.Count;
+    public int Count => _order?.Length ?? _view?.Length ?? _source.Count;
 
     public bool IsFiltered => _view is not null;
 
@@ -46,7 +54,9 @@ public sealed class VirtualEventList : IList, IReadOnlyList<EventRowViewModel>
     /// <summary>Row showing the event at <paramref name="eventIndex"/>, or -1 when it is not in this view.</summary>
     public int RowOfEvent(int eventIndex)
     {
-        var position = _view is null ? eventIndex : Array.BinarySearch(_view, eventIndex);
+        var position = _order is not null ? PositionInOrder(eventIndex)
+            : _view is null ? eventIndex
+            : Array.BinarySearch(_view, eventIndex);
         if (position < 0 || position >= Count)
         {
             return -1;
@@ -55,10 +65,27 @@ public sealed class VirtualEventList : IList, IReadOnlyList<EventRowViewModel>
         return _newestFirst ? Count - 1 - position : position;
     }
 
+    private int PositionInOrder(int eventIndex)
+    {
+        if (_positionOfEvent is null)
+        {
+            var positions = new int[_source.Count];
+            Array.Fill(positions, -1);
+            for (var i = 0; i < _order!.Length; i++)
+            {
+                positions[_order[i]] = i;
+            }
+
+            _positionOfEvent = positions;
+        }
+
+        return (uint)eventIndex < (uint)_positionOfEvent.Length ? _positionOfEvent[eventIndex] : -1;
+    }
+
     private int EventAt(int row)
     {
         var position = _newestFirst ? Count - 1 - row : row;
-        return _view is null ? position : _view[position];
+        return _order is not null ? _order[position] : _view is null ? position : _view[position];
     }
 
     private EventRowViewModel[] GetPage(int pageIndex)
